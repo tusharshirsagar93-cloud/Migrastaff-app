@@ -327,7 +327,7 @@ class MigraFirestoreRepository(
         return try {
             val clean = text.trim()
             val target = if (langCode == "ru") "en" else "ru"
-            val trans = translated.trim().takeIf { it.isNotEmpty() && it != clean } ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val trans = translated.trim().takeIf { it.isNotEmpty() && it != clean && !it.startsWith("[Авто") && !it.startsWith("[Auto") } ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching {
                     val u = java.net.URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + target + "&dt=t&q=" + java.net.URLEncoder.encode(clean, "UTF-8"))
                     val body = u.readText()

@@ -94,6 +94,24 @@ jobs:
           fi
           echo "Temporary ./debug.keystore verified."
 
+      - name: Pad mipmap launcher icons
+        run: |
+          python3 -m pip install -q pillow
+          python3 -c '
+          from PIL import Image
+          import pathlib
+          res = pathlib.Path("app/src/main/res")
+          sym = Image.open(res / "drawable/ic_migrastaff_symbol.png").convert("RGBA")
+          for p in res.glob("mipmap-*/ic_launcher*.png"):
+              sz = Image.open(p).size[0]
+              canvas = Image.new("RGBA", (sz, sz), (255, 255, 255, 255))
+              inner = int(sz * 0.72)
+              resized = sym.resize((inner, inner), Image.LANCZOS)
+              off = (sz - inner) // 2
+              canvas.paste(resized, (off, off), resized)
+              canvas.convert("RGB").save(p, "PNG")
+          '
+
       - name: Build debug APK
         shell: bash
         run: gradle :app:assembleDebug --stacktrace --no-daemon
