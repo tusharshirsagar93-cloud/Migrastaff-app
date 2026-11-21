@@ -99,7 +99,10 @@ import com.example.ui.theme.DeepNavyInk
 import com.example.ui.theme.GlacierCyan
 import com.example.ui.theme.GlacierCyanSoft
 import com.example.ui.theme.HyperCobalt
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import com.example.ui.theme.IceWhite
+import com.example.ui.theme.MigraThemeState
 import com.example.ui.theme.QrModuleNavy
 import com.example.ui.theme.RoyalAmethyst
 import com.example.ui.theme.RoyalAmethystSoft
@@ -207,6 +210,25 @@ fun MigraBrandHeader(
                 }
             }
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable { MigraThemeState.isNight = !MigraThemeState.isNight },
+                    shape = CircleShape,
+                    color = GlacierCyanSoft,
+                    border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.45f))
+                ) {
+                    Icon(
+                        imageVector = if (MigraThemeState.isNight) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                        contentDescription = "Toggle Night Vision",
+                        tint = GlacierCyan,
+                        modifier = Modifier.padding(8.dp).size(16.dp)
+                    )
+                }
             Surface(
                 modifier = Modifier
                     .testTag("lang_toggle_button")
@@ -233,6 +255,7 @@ fun MigraBrandHeader(
                         color = IceWhite
                     )
                 }
+            }
             }
         }
         Box(
