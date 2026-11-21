@@ -1,0 +1,531 @@
+package com.example.ui.viewmodel
+
+import android.app.Activity
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.MigraCatalogData
+import com.example.data.auth.GoogleAuthHelper
+import com.example.data.auth.GoogleSignInResult
+import com.example.data.fx.FxRepository
+import com.example.data.prefs.MigraPreferencesRepository
+import com.example.model.AppLang
+import com.example.model.AuthUiState
+import com.example.model.InfoTopic
+import com.example.model.JobVacancy
+import com.example.model.MainTab
+import com.example.model.SortOrder
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class BrowseFilterState(
+    val query: String = "",
+    val selectedProfession: String = "",
+    val selectedCountry: String = "",
+    val verifiedOnly: Boolean = false,
+    val savedOnly: Boolean = false,
+    val sortOrder: SortOrder = SortOrder.RELEVANCE
+)
+
+data class FxUiState(
+    val fromCode: String = "RUB",
+    val toCode: String = "INR",
+    val amountInput: String = "10000",
+    val ratesPerRub: Map<String, Double> = MigraCatalogData.defaultRatesPerRub(),
+    val isLive: Boolean = false,
+    val isSyncing: Boolean = false,
+    val updatedAtLabel: String = ""
+) {
+    val parsedAmount: Double get() = amountInput.toDoubleOrNull()?.takeIf { it >= 0.0 } ?: 0.0
+    val crossRate: Double get() = FxRepository.getCrossRate(fromCode, toCode, ratesPerRub)
+    val convertedAmount: Double get() = parsedAmount * crossRate
+    val rubPerUsd: Double get() = FxRepository.computeRubPerUsd(ratesPerRub)
+}
+
+data class CryptoUiState(
+    val selectedPlanKey: String = "pro",
+    val selectedCoinKey: String = "USDT_TRC20",
+    val customAmountInput: String = "5000",
+    val customCurrency: String = "RUB",
+    val payerContact: String = "",
+    val txHash: String = "",
+    val lastReceiptRef: String? = null,
+    val isSubmitting: Boolean = false
+)
+
+class MigraMainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val prefsRepo = MigraPreferencesRepository(application)
+    private val fxRepo = FxRepository(prefsRepo)
+    private val authHelper = GoogleAuthHelper()
+    private val firestoreRepo = MigraFirestoreRepository(application)
+
+    val language: StateFlow<AppLang> = prefsRepo.languageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppLang.EN)
+
+    val localFavorites: StateFlow<Set<Int>> = prefsRepo.localFavoritesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val appliedVacancyIds: StateFlow<Set<Int>> = prefsRepo.appliedVacancyIdsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    private val _activeTab = MutableStateFlow(MainTab.SEARCH)
+    val activeTab: StateFlow<MainTab> = _activeTab.asStateFlow()
+
+    private val _filterState = MutableStateFlow(BrowseFilterState())
+    val filterState: StateFlow<BrowseFilterState> = _filterState.asStateFlow()
+
+    private val _fxState = MutableStateFlow(FxUiState())
+    val fxState: StateFlow<FxUiState> = _fxState.asStateFlow()
+
+    private val _cryptoState = MutableStateFlow(CryptoUiState())
+    val cryptoState: StateFlow<CryptoUiState> = _cryptoState.asStateFlow()
+
+    private val _selectedVacancy = MutableStateFlow<JobVacancy?>(null)
+    val selectedVacancy: StateFlow<JobVacancy?> = _selectedVacancy.asStateFlow()
+
+    private val _selectedInfoTopic = MutableStateFlow<InfoTopic?>(null)
+    val selectedInfoTopic: StateFlow<InfoTopic?> = _selectedInfoTopic.asStateFlow()
+
+    private val _showFilterSheet = MutableStateFlow(false)
+    val showFilterSheet: StateFlow<Boolean> = _showFilterSheet.asStateFlow()
+
+    private val _authState = MutableStateFlow<AuthUiState>(AuthUiState.Loading)
+    val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
+
+    private val _authErrorMessage = MutableStateFlow<String?>(null)
+    val authErrorMessage: StateFlow<String?> = _authErrorMessage.asStateFlow()
+
+    private val _snackbarMessage = MutableStateFlow<String?>(null)
+    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
+
+    private val liveJobsFlow: StateFlow<List<JobVacancy>> = firestoreRepo.observeLiveJobs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val filteredVacancies: StateFlow<List<JobVacancy>> = combine(
+        _filterState,
+        localFavorites,
+        language,
+        liveJobsFlow
+    ) { filter, favs, _, liveJobs ->
+        val q = filter.query.trim().lowercase()
+        val matched = liveJobs.filter { job ->
+            val countryMatch = filter.selectedCountry.isEmpty() ||
+                job.visaCountries.contains(filter.selectedCountry)
+            val profMatch = filter.selectedProfession.isEmpty() || job.category == filter.selectedProfession
+            val verMatch = !filter.verifiedOnly || job.verifiedEmployer
+            val savedMatch = !filter.savedOnly || favs.contains(job.id)
+            val queryMatch = q.isEmpty() ||
+                job.titleEn.lowercase().contains(q) ||
+                job.titleRu.lowercase().contains(q) ||
+                job.employerEn.lowercase().contains(q) ||
+                job.employerRu.lowercase().contains(q) ||
+                job.category.lowercase().contains(q) ||
+                MigraCatalogData.profName(job.category, AppLang.RU).lowercase().contains(q) ||
+                job.cityEn.lowercase().contains(q) ||
+                job.cityRu.lowercase().contains(q) ||
+                job.descEn.lowercase().contains(q) ||
+                job.descRu.lowercase().contains(q)
+            countryMatch && profMatch && verMatch && savedMatch && queryMatch
+        }
+        when (filter.sortOrder) {
+            SortOrder.RELEVANCE -> matched
+            SortOrder.SALARY_ASC -> matched.sortedBy { it.salaryMinRub }
+            SortOrder.SALARY_DESC -> matched.sortedByDescending { it.salaryMaxRub }
+            SortOrder.EXPERIENCE_DESC -> matched.sortedByDescending { it.rating }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        val current = runCatching { FirebaseAuth.getInstance().currentUser }.getOrNull()
+        _authState.value = if (current != null) {
+            AuthUiState.SignedIn(
+                uid = current.uid,
+                displayName = current.displayName ?: "MigraStaff User",
+                email = current.email ?: "",
+                isAutoSignedIn = true
+            )
+        } else {
+            AuthUiState.SignedOut
+        }
+
+        viewModelScope.launch {
+            val cached = prefsRepo.cachedFxFlow.first()
+            if (cached != null) {
+                _fxState.update {
+                    it.copy(
+                        ratesPerRub = it.ratesPerRub + cached.ratesPerRub,
+                        updatedAtLabel = cached.updatedAtLabel
+                    )
+                }
+            }
+            refreshFxRates(manual = false)
+        }
+    }
+
+    fun selectTab(tab: MainTab) {
+        _activeTab.value = tab
+    }
+
+    fun toggleLanguage() {
+        val next = if (language.value == AppLang.EN) AppLang.RU else AppLang.EN
+        viewModelScope.launch { prefsRepo.setLanguage(next) }
+    }
+
+    fun updateSearchQuery(query: String) {
+        _filterState.update { it.copy(query = query) }
+    }
+
+    fun selectCategory(profession: String) {
+        _filterState.update {
+            val next = if (it.selectedProfession == profession) "" else profession
+            it.copy(selectedProfession = next)
+        }
+    }
+
+    fun toggleSavedOnlyFilter() {
+        _filterState.update { it.copy(savedOnly = !it.savedOnly) }
+    }
+
+    fun setFilterSheetVisible(visible: Boolean) {
+        _showFilterSheet.value = visible
+    }
+
+    fun updateFilters(
+        country: String,
+        profession: String,
+        verifiedOnly: Boolean,
+        sortOrder: SortOrder
+    ) {
+        _filterState.update {
+            it.copy(
+                selectedCountry = country,
+                selectedProfession = profession,
+                verifiedOnly = verifiedOnly,
+                sortOrder = sortOrder
+            )
+        }
+    }
+
+    fun resetFilters() {
+        _filterState.value = BrowseFilterState()
+    }
+
+    fun openVacancyDetail(vacancy: JobVacancy) {
+        _selectedVacancy.value = vacancy
+    }
+
+    fun closeVacancyDetail() {
+        _selectedVacancy.value = null
+    }
+
+    fun openInfoTopic(topic: InfoTopic) {
+        _selectedInfoTopic.value = topic
+    }
+
+    fun closeInfoTopic() {
+        _selectedInfoTopic.value = null
+    }
+
+    fun toggleLocalFavorite(vacancyId: Int) {
+        viewModelScope.launch { prefsRepo.toggleLocalFavorite(vacancyId) }
+    }
+
+    fun applyToVacancy(vacancyId: Int) {
+        viewModelScope.launch {
+            prefsRepo.markVacancyApplied(vacancyId)
+            val msg = if (language.value == AppLang.RU) {
+                "Отклик отправлен! Контакты HR открыты."
+            } else {
+                "Application sent! Direct HR contact unlocked."
+            }
+            _snackbarMessage.value = msg
+        }
+    }
+
+    // FX Controls
+    fun setFxFrom(code: String) {
+        _fxState.update { it.copy(fromCode = code) }
+    }
+
+    fun setFxTo(code: String) {
+        _fxState.update { it.copy(toCode = code) }
+    }
+
+    fun setFxAmount(input: String) {
+        val sanitized = input.filter { it.isDigit() || it == '.' }
+        _fxState.update { it.copy(amountInput = sanitized) }
+    }
+
+    fun swapFxCurrencies() {
+        _fxState.update { it.copy(fromCode = it.toCode, toCode = it.fromCode) }
+    }
+
+    fun applyFxPreset(from: String, to: String, amount: Double) {
+        _fxState.update {
+            it.copy(
+                fromCode = from,
+                toCode = to,
+                amountInput = amount.toLong().toString()
+            )
+        }
+    }
+
+    fun refreshFxRates(manual: Boolean = true) {
+        viewModelScope.launch {
+            _fxState.update { it.copy(isSyncing = true) }
+            val outcome = fxRepo.fetchLiveRates()
+            _fxState.update { current ->
+                current.copy(
+                    ratesPerRub = if (outcome.isLive) outcome.ratesPerRub else current.ratesPerRub,
+                    isLive = outcome.isLive,
+                    isSyncing = false,
+                    updatedAtLabel = if (outcome.updatedAtLabel.isNotEmpty()) {
+                        outcome.updatedAtLabel
+                    } else {
+                        current.updatedAtLabel
+                    }
+                )
+            }
+            if (manual) {
+                _snackbarMessage.value = if (outcome.isLive) {
+                    if (language.value == AppLang.RU) "Курсы валют обновлены" else "Live FX rates updated"
+                } else {
+                    if (language.value == AppLang.RU) "Используется сохранённый курс" else "Using cached FX rate"
+                }
+            }
+        }
+    }
+
+    // Crypto Controls
+    fun selectCryptoPlan(planKey: String) {
+        _cryptoState.update { it.copy(selectedPlanKey = planKey, lastReceiptRef = null) }
+    }
+
+    fun selectCryptoCoin(coinKey: String) {
+        _cryptoState.update { it.copy(selectedCoinKey = coinKey) }
+    }
+
+    fun updateCustomCryptoAmount(raw: String) {
+        val clean = raw.filter { it.isDigit() || it == '.' }
+        _cryptoState.update { it.copy(customAmountInput = clean) }
+    }
+
+    fun toggleCustomCryptoCurrency() {
+        _cryptoState.update {
+            it.copy(customCurrency = if (it.customCurrency == "RUB") "USD" else "RUB")
+        }
+    }
+
+    fun updateCryptoContact(contact: String) {
+        _cryptoState.update { it.copy(payerContact = contact) }
+    }
+
+    fun updateCryptoTxHash(tx: String) {
+        _cryptoState.update { it.copy(txHash = tx) }
+    }
+
+    fun submitCryptoReceipt(receipt: com.example.model.CryptoPaymentReceipt) {
+        viewModelScope.launch {
+            _cryptoState.update { it.copy(isSubmitting = true) }
+            val currentUser = runCatching { FirebaseAuth.getInstance().currentUser }.getOrNull()
+            if (currentUser != null) {
+                val repo = com.example.data.firebase.MigraFirestoreRepository(getApplication())
+                val res = repo.submitCryptoReceipt(receipt.copy(userId = currentUser.uid))
+                res.onSuccess { ref ->
+                    _cryptoState.update {
+                        it.copy(isSubmitting = false, lastReceiptRef = ref, txHash = "")
+                    }
+                    _snackbarMessage.value = if (language.value == AppLang.RU) {
+                        "Чек $ref сохранён в облаке"
+                    } else {
+                        "Receipt $ref saved to your cloud account"
+                    }
+                }.onFailure { err ->
+                    _cryptoState.update { it.copy(isSubmitting = false) }
+                    _snackbarMessage.value = err.localizedMessage ?: "Submission failed"
+                }
+            } else {
+                _cryptoState.update {
+                    it.copy(isSubmitting = false, lastReceiptRef = receipt.refId, txHash = "")
+                }
+                _snackbarMessage.value = if (language.value == AppLang.RU) {
+                    "Заявка ${receipt.refId} сформирована (войдите для сохранения в облаке)"
+                } else {
+                    "Receipt ${receipt.refId} generated (sign in on Profile to sync)"
+                }
+            }
+        }
+    }
+
+    // Auth Controls
+    fun tryAutoSignIn(activity: Activity) {
+        viewModelScope.launch {
+            val res = authHelper.attemptAutoSignIn(activity)
+            when (res) {
+                is GoogleSignInResult.Success -> {
+                    _authErrorMessage.value = null
+                    _authState.value = AuthUiState.SignedIn(
+                        uid = res.user.uid,
+                        displayName = res.user.displayName ?: "MigraStaff User",
+                        email = res.user.email ?: "",
+                        isAutoSignedIn = res.isAutoSignedIn
+                    )
+                }
+                is GoogleSignInResult.NoSavedCredential,
+                is GoogleSignInResult.Cancelled -> {
+                    if (_authState.value is AuthUiState.Loading) {
+                        _authState.value = AuthUiState.SignedOut
+                    }
+                }
+                is GoogleSignInResult.Error -> {
+                    _authState.value = AuthUiState.SignedOut
+                }
+            }
+        }
+    }
+
+    fun signInWithGoogle(activity: Activity) {
+        viewModelScope.launch {
+            _authErrorMessage.value = null
+            _authState.value = AuthUiState.Loading
+            when (val res = authHelper.signInWithGoogle(activity)) {
+                is GoogleSignInResult.Success -> {
+                    _authState.value = AuthUiState.SignedIn(
+                        uid = res.user.uid,
+                        displayName = res.user.displayName ?: "MigraStaff User",
+                        email = res.user.email ?: "",
+                        isAutoSignedIn = false
+                    )
+                    _snackbarMessage.value = if (language.value == AppLang.RU) {
+                        "Вход выполнен: ${res.user.email ?: res.user.displayName}"
+                    } else {
+                        "Signed in as ${res.user.email ?: res.user.displayName}"
+                    }
+                }
+                is GoogleSignInResult.Cancelled -> {
+                    _authState.value = AuthUiState.SignedOut
+                }
+                is GoogleSignInResult.NoSavedCredential -> {
+                    _authState.value = AuthUiState.SignedOut
+                    _authErrorMessage.value = "No Google account found on device."
+                }
+                is GoogleSignInResult.Error -> {
+                    _authState.value = AuthUiState.SignedOut
+                    _authErrorMessage.value = res.message
+                }
+            }
+        }
+    }
+
+    fun signInWithEmail(emailOrUsername: String, password: String) {
+        val raw = emailOrUsername.trim()
+        if (raw.isEmpty() || password.length < 6) {
+            _authErrorMessage.value = if (language.value == AppLang.RU) {
+                "Введите корректный Email/@username и пароль (от 6 символов)"
+            } else {
+                "Enter a valid Email/@username and password (6+ chars)"
+            }
+            return
+        }
+        viewModelScope.launch {
+            _authErrorMessage.value = null
+            _authState.value = AuthUiState.Loading
+            try {
+                val resolvedEmail = firestoreRepo.resolveEmailForLogin(raw)
+                val res = firebaseAuth.signInWithEmailAndPassword(resolvedEmail, password).await()
+                val user = res.user ?: throw IllegalStateException("Sign in failed")
+                _authState.value = AuthUiState.SignedIn(
+                    uid = user.uid,
+                    displayName = user.displayName ?: resolvedEmail.substringBefore("@"),
+                    email = user.email ?: resolvedEmail,
+                    isAutoSignedIn = false
+                )
+            } catch (e: Exception) {
+                _authState.value = AuthUiState.SignedOut
+                _authErrorMessage.value = e.localizedMessage ?: "Invalid email or password"
+            }
+        }
+    }
+
+    fun signUpWithEmail(emailInput: String, password: String) {
+        val email = emailInput.trim().lowercase()
+        if (!email.contains("@") || password.length < 6) {
+            _authErrorMessage.value = if (language.value == AppLang.RU) {
+                "Введите корректный Email и пароль (минимум 6 символов)"
+            } else {
+                "Enter a valid Email and password (6+ chars)"
+            }
+            return
+        }
+        viewModelScope.launch {
+            _authErrorMessage.value = null
+            _authState.value = AuthUiState.Loading
+            try {
+                val res = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+                val user = res.user ?: throw IllegalStateException("Account creation failed")
+                _authState.value = AuthUiState.SignedIn(
+                    uid = user.uid,
+                    displayName = email.substringBefore("@"),
+                    email = user.email ?: email,
+                    isAutoSignedIn = false
+                )
+            } catch (e: Exception) {
+                _authState.value = AuthUiState.SignedOut
+                _authErrorMessage.value = e.localizedMessage ?: "Could not create account"
+            }
+        }
+    }
+
+    fun resetPassword(emailOrUsername: String) {
+        val raw = emailOrUsername.trim()
+        if (raw.isEmpty()) {
+            _authErrorMessage.value = if (language.value == AppLang.RU) {
+                "Сначала введите Email или @username"
+            } else {
+                "Enter your Email or @username first"
+            }
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val resolved = firestoreRepo.resolveEmailForLogin(raw)
+                firebaseAuth.sendPasswordResetEmail(resolved).await()
+                _authErrorMessage.value = null
+                _snackbarMessage.value = if (language.value == AppLang.RU) {
+                    "Письмо для сброса пароля отправлено на $resolved"
+                } else {
+                    "Password reset email sent to $resolved"
+                }
+            } catch (e: Exception) {
+                _authErrorMessage.value = e.localizedMessage ?: "Could not send reset email"
+            }
+        }
+    }
+
+    fun signOut(context: Context) {
+        viewModelScope.launch {
+            authHelper.signOut(context)
+            _authState.value = AuthUiState.SignedOut
+            _authErrorMessage.value = null
+            _snackbarMessage.value = if (language.value == AppLang.RU) "Вы вышли из аккаунта" else "Signed out"
+        }
+    }
+
+    fun showMessage(msg: String) {
+        _snackbarMessage.value = msg
+    }
+
+    fun clearSnackbar() {
+        _snackbarMessage.value = null
+    }
+}

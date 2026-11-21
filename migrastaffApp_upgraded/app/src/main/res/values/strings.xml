@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">MigraStaff</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_fx">FX</string>
+    <string name="tab_crypto">Crypto</string>
+    <string name="tab_about">About</string>
+    <string name="tab_profile">Profile</string>
+    <string name="cd_search">Search candidates</string>
+    <string name="cd_filter">Open filters</string>
+    <string name="cd_favorites">Saved workers</string>
+    <string name="cd_verified">Verified candidate</string>
+    <string name="cd_swap_currency">Swap currencies</string>
+    <string name="cd_refresh_fx">Refresh live rates</string>
+    <string name="cd_qr_code">Crypto payment QR matrix</string>
+</resources>

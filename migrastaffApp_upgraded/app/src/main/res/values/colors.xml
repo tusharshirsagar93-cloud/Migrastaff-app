@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="aurora_void">#FF050914</color>
+    <color name="aurora_surface">#FF0D1730</color>
+    <color name="glacier_cyan">#FF00E5FF</color>
+    <color name="hyper_cobalt">#FF2962FF</color>
+    <color name="aurora_mint">#FF00F5B8</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

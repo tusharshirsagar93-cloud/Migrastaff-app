@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "261659639080",
+    "project_id": "primal-future-wf900",
+    "storage_bucket": "primal-future-wf900.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:261659639080:android:0a5e2d00f850833169e41d",
+        "android_client_info": {
+          "package_name": "com.aistudio.hisabcalc.vkrpzm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "261659639080-v84jvp9l7n5skj7vq0fv5noootuqij43.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQJHtuiPsRjjK3V0rslof1f6eXrlxs4qs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "261659639080-v84jvp9l7n5skj7vq0fv5noootuqij43.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

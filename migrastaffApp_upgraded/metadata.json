@@ -1,0 +1,6 @@
+{
+  "name": "MigraStaff",
+  "description": "Global talent & Russian jobs platform with hh.ru-style search, live RUB currency exchange, crypto settlement, and bilingual EN/RU support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

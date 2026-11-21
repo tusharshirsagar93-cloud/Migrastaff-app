@@ -1,0 +1,163 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Auth & Helper Primitives
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string
+        && id.size() >= 1
+        && id.size() <= 128
+        && !id.matches('.*[/\\\\].*')
+        && id != '.'
+        && id != '..';
+    }
+
+    function isValidCandidateProfile(data, userId) {
+      return data.keys().hasAll([
+          'userId', 'username', 'surname', 'firstName', 'countryCode',
+          'profession', 'experienceYears', 'expectedSalary', 'languages',
+          'skills', 'about', 'phone', 'dateOfBirth', 'verStatus',
+          'photoCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'username', 'surname', 'firstName', 'countryCode',
+          'profession', 'experienceYears', 'expectedSalary', 'languages',
+          'skills', 'about', 'phone', 'dateOfBirth', 'verStatus',
+          'photoCount', 'createdAt', 'updatedAt'
+        ])
+        && data.userId is string && data.userId == userId
+        && data.username is string && data.username.size() >= 3 && data.username.size() <= 40
+        && data.surname is string && data.surname.size() >= 1 && data.surname.size() <= 100
+        && data.firstName is string && data.firstName.size() >= 1 && data.firstName.size() <= 100
+        && data.countryCode is string && data.countryCode.size() >= 2 && data.countryCode.size() <= 8
+        && data.profession is string && data.profession.size() >= 1 && data.profession.size() <= 80
+        && data.experienceYears is number && data.experienceYears >= 0 && data.experienceYears <= 70
+        && data.expectedSalary is number && data.expectedSalary >= 0 && data.expectedSalary <= 10000000
+        && data.languages is string && data.languages.size() <= 200
+        && data.skills is string && data.skills.size() <= 400
+        && data.about is string && data.about.size() <= 2000
+        && data.phone is string && data.phone.size() <= 40
+        && data.dateOfBirth is string && data.dateOfBirth.size() <= 30
+        && data.verStatus is string && data.verStatus in ['pending', 'verified']
+        && data.photoCount is number && data.photoCount >= 0 && data.photoCount <= 10
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFavoriteWorker(data, userId, workerId) {
+      return data.keys().hasAll([
+          'userId', 'workerId', 'workerName', 'profession',
+          'countryCode', 'salaryRub', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'workerId', 'workerName', 'profession',
+          'countryCode', 'salaryRub', 'createdAt'
+        ])
+        && data.userId is string && data.userId == userId
+        && data.workerId is string && data.workerId == workerId && data.workerId.size() <= 64
+        && data.workerName is string && data.workerName.size() >= 1 && data.workerName.size() <= 120
+        && data.profession is string && data.profession.size() >= 1 && data.profession.size() <= 80
+        && data.countryCode is string && data.countryCode.size() >= 2 && data.countryCode.size() <= 8
+        && data.salaryRub is number && data.salaryRub >= 0 && data.salaryRub <= 10000000
+        && data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidSupportMessage(data, userId) {
+      return data.keys().hasAll([
+          'userId', 'senderRole', 'textOriginal', 'textTranslated', 'lang', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'senderRole', 'textOriginal', 'textTranslated', 'lang', 'createdAt'
+        ])
+        && data.userId is string && data.userId == userId
+        && data.senderRole is string && data.senderRole in ['candidate', 'director']
+        && data.textOriginal is string && data.textOriginal.size() >= 1 && data.textOriginal.size() <= 2000
+        && data.textTranslated is string && data.textTranslated.size() <= 2000
+        && data.lang is string && data.lang in ['en', 'ru']
+        && data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCryptoPaymentReceipt(data, userId) {
+      return data.keys().hasAll([
+          'userId', 'refId', 'planKey', 'coinKey', 'amountCrypto',
+          'amountRub', 'txHash', 'payerContact', 'status', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'refId', 'planKey', 'coinKey', 'amountCrypto',
+          'amountRub', 'txHash', 'payerContact', 'status', 'createdAt'
+        ])
+        && data.userId is string && data.userId == userId
+        && data.refId is string && data.refId.size() >= 3 && data.refId.size() <= 64
+        && data.planKey is string && data.planKey in ['pro', 'business', 'unlock', 'custom']
+        && data.coinKey is string && data.coinKey in ['USDT_TRC20', 'USDT_ERC20', 'TON', 'BTC', 'ETH']
+        && data.amountCrypto is string && data.amountCrypto.size() >= 1 && data.amountCrypto.size() <= 40
+        && data.amountRub is number && data.amountRub >= 0 && data.amountRub <= 100000000
+        && data.txHash is string && data.txHash.size() >= 8 && data.txHash.size() <= 140
+        && data.payerContact is string && data.payerContact.size() <= 160
+        && data.status is string && data.status in ['submitted', 'confirmed']
+        && data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // 3. User-Scoped Collections
+    match /users/{userId}/profiles/{profileId} {
+      allow get: if isValidId(userId) && isValidId(profileId) && isOwner(userId);
+      allow list: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isValidId(profileId) && isOwner(userId)
+        && isValidCandidateProfile(request.resource.data, userId)
+        && request.resource.data.verStatus == 'pending';
+      allow update: if isValidId(userId) && isValidId(profileId) && isOwner(userId)
+        && isValidCandidateProfile(request.resource.data, userId)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.verStatus == resource.data.verStatus
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'username', 'surname', 'firstName', 'countryCode', 'profession',
+          'experienceYears', 'expectedSalary', 'languages', 'skills', 'about',
+          'phone', 'dateOfBirth', 'photoCount', 'updatedAt'
+        ]);
+      allow delete: if isValidId(userId) && isValidId(profileId) && isOwner(userId);
+    }
+
+    match /users/{userId}/favorites/{workerId} {
+      allow get: if isValidId(userId) && isValidId(workerId) && isOwner(userId);
+      allow list: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isValidId(workerId) && isOwner(userId)
+        && isValidFavoriteWorker(request.resource.data, userId, workerId);
+      allow update: if false;
+      allow delete: if isValidId(userId) && isValidId(workerId) && isOwner(userId);
+    }
+
+    match /users/{userId}/messages/{messageId} {
+      allow get: if isValidId(userId) && isValidId(messageId) && isOwner(userId);
+      allow list: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isValidId(messageId) && isOwner(userId)
+        && isValidSupportMessage(request.resource.data, userId)
+        && request.resource.data.senderRole == 'candidate';
+      allow update: if false;
+      allow delete: if isValidId(userId) && isValidId(messageId) && isOwner(userId);
+    }
+
+    match /users/{userId}/crypto_payments/{paymentId} {
+      allow get: if isValidId(userId) && isValidId(paymentId) && isOwner(userId);
+      allow list: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isValidId(paymentId) && isOwner(userId)
+        && isValidCryptoPaymentReceipt(request.resource.data, userId)
+        && request.resource.data.status == 'submitted';
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "CandidateProfile": {
+      "description": "Locked MigraStaff candidate registration profile owned by an authenticated user.",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "surname": { "type": "string" },
+        "firstName": { "type": "string" },
+        "countryCode": { "type": "string" },
+        "profession": { "type": "string" },
+        "experienceYears": { "type": "number" },
+        "expectedSalary": { "type": "number" },
+        "languages": { "type": "string" },
+        "skills": { "type": "string" },
+        "about": { "type": "string" },
+        "phone": { "type": "string" },
+        "dateOfBirth": { "type": "string" },
+        "verStatus": { "type": "string" },
+        "photoCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": [
+        "userId",
+        "username",
+        "surname",
+        "firstName",
+        "countryCode",
+        "profession",
+        "experienceYears",
+        "expectedSalary",
+        "languages",
+        "skills",
+        "about",
+        "phone",
+        "dateOfBirth",
+        "verStatus",
+        "photoCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FavoriteWorker": {
+      "description": "A candidate card bookmarked by a signed-in user.",
+      "properties": {
+        "userId": { "type": "string" },
+        "workerId": { "type": "string" },
+        "workerName": { "type": "string" },
+        "profession": { "type": "string" },
+        "countryCode": { "type": "string" },
+        "salaryRub": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": [
+        "userId",
+        "workerId",
+        "workerName",
+        "profession",
+        "countryCode",
+        "salaryRub",
+        "createdAt"
+      ]
+    },
+    "SupportMessage": {
+      "description": "Direct EN/RU message between an authenticated candidate and the MigraStaff Director.",
+      "properties": {
+        "userId": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "textOriginal": { "type": "string" },
+        "textTranslated": { "type": "string" },
+        "lang": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": [
+        "userId",
+        "senderRole",
+        "textOriginal",
+        "textTranslated",
+        "lang",
+        "createdAt"
+      ]
+    },
+    "CryptoPaymentReceipt": {
+      "description": "Crypto payment verification receipt submitted by a signed-in user.",
+      "properties": {
+        "userId": { "type": "string" },
+        "refId": { "type": "string" },
+        "planKey": { "type": "string" },
+        "coinKey": { "type": "string" },
+        "amountCrypto": { "type": "string" },
+        "amountRub": { "type": "number" },
+        "txHash": { "type": "string" },
+        "payerContact": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": [
+        "userId",
+        "refId",
+        "planKey",
+        "coinKey",
+        "amountCrypto",
+        "amountRub",
+        "txHash",
+        "payerContact",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/CandidateProfile" },
+      "description": "User's private candidate profile documents (typically docId 'candidate')."
+    },
+    "/users/{userId}/favorites/{workerId}": {
+      "schema": { "$ref": "#/entities/FavoriteWorker" },
+      "description": "User's bookmarked workers."
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/SupportMessage" },
+      "description": "User's private chat thread with MigraStaff Director."
+    },
+    "/users/{userId}/crypto_payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/CryptoPaymentReceipt" },
+      "description": "User's submitted Crypto Pay TXID receipts."
+    }
+  }
+}
