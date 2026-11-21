@@ -297,8 +297,11 @@ class MigraFirestoreRepository(
             .map<com.google.firebase.firestore.QuerySnapshot, StreamResult<List<SupportMessage>>> { snap ->
                 val list = snap.documents.map { d ->
                     val sender = d.getString("sender") ?: d.getString("senderRole") ?: "candidate"
-                    val orig = d.getString("origText") ?: d.getString("textOriginal") ?: d.getString("text").orEmpty()
-                    val trans = d.getString("textRu") ?: d.getString("textEn") ?: d.getString("textTranslated") ?: orig
+                    val tEn = d.getString("textEn")?.trim().orEmpty()
+                    val tRu = d.getString("textRu")?.trim().orEmpty()
+                    val rawOrig = listOf(d.getString("textOriginal"), d.getString("origText"), d.getString("text"), tEn, tRu).firstOrNull { !it.isNullOrBlank() }?.trim().orEmpty()
+                    val orig = if (sender == "director" && tEn.isNotEmpty()) tEn else rawOrig
+                    val trans = if (sender == "director") tRu.ifEmpty { rawOrig } else tRu.ifEmpty { d.getString("textTranslated")?.trim().orEmpty() }.ifEmpty { rawOrig }
                     SupportMessage(
                         id = d.id,
                         userId = uid,
@@ -323,7 +326,15 @@ class MigraFirestoreRepository(
         val path = "candidates/$uid/messages"
         return try {
             val clean = text.trim()
-            val trans = translated.trim().ifEmpty { clean }
+            val target = if (langCode == "ru") "en" else "ru"
+            val trans = translated.trim().takeIf { it.isNotEmpty() && it != clean } ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val u = java.net.URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + target + "&dt=t&q=" + java.net.URLEncoder.encode(clean, "UTF-8"))
+                    val body = u.readText()
+                    val arr = org.json.JSONArray(body).getJSONArray(0)
+                    buildString { for (i in 0 until arr.length()) append(arr.getJSONArray(i).getString(0)) }.trim()
+                }.getOrDefault(clean).ifEmpty { clean }
+            }
             val msgMap = hashMapOf<String, Any>(
                 "sender" to "candidate",
                 "senderRole" to "candidate",
