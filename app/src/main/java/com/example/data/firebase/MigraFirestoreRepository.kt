@@ -321,30 +321,60 @@ class MigraFirestoreRepository(
             }
     }
 
+    private fun translateTextSync(text: String, targetLang: String): String {
+        val clean = text.trim()
+        if (clean.isEmpty()) return ""
+        val q = java.net.URLEncoder.encode(clean, "UTF-8")
+        // 1. Google Translate with User-Agent
+        runCatching {
+            val conn = (java.net.URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=$q").openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                setRequestProperty("User-Agent", "Mozilla/5.0")
+            }
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            val arr = org.json.JSONArray(body).getJSONArray(0)
+            val res = buildString { for (i in 0 until arr.length()) append(arr.getJSONArray(i).getString(0)) }.trim()
+            if (res.isNotEmpty() && !res.equals(clean, ignoreCase = true)) return res
+        }
+        // 2. Fallback: MyMemory API
+        val pair = if (targetLang == "ru") "en|ru" else "ru|en"
+        runCatching {
+            val conn = (java.net.URL("https://api.mymemory.translated.net/get?q=$q&langpair=$pair").openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                setRequestProperty("User-Agent", "Mozilla/5.0")
+            }
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            val res = org.json.JSONObject(body).optJSONObject("responseData")?.optString("translatedText", "")?.trim().orEmpty()
+            if (res.isNotEmpty() && !res.equals(clean, ignoreCase = true)) return res
+        }
+        return clean
+    }
+
     suspend fun sendMessage(text: String, translated: String, langCode: String): Result<Unit> {
         val uid = runCatching { requireUserId() }.getOrElse { return Result.failure(it) }
         val path = "candidates/$uid/messages"
         return try {
             val clean = text.trim()
-            val target = if (langCode == "ru") "en" else "ru"
-            val trans = translated.trim().takeIf { it.isNotEmpty() && it != clean && !it.startsWith("[Авто") && !it.startsWith("[Auto") } ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching {
-                    val u = java.net.URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + target + "&dt=t&q=" + java.net.URLEncoder.encode(clean, "UTF-8"))
-                    val body = u.readText()
-                    val arr = org.json.JSONArray(body).getJSONArray(0)
-                    buildString { for (i in 0 until arr.length()) append(arr.getJSONArray(i).getString(0)) }.trim()
-                }.getOrDefault(clean).ifEmpty { clean }
+            val isRuText = clean.any { it in '\u0400'..'\u04FF' }
+            val target = if (isRuText) "en" else "ru"
+            val trans = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                translateTextSync(clean, target)
             }
+            val textRu = if (isRuText) clean else trans
+            val textEn = if (isRuText) trans else clean
             val msgMap = hashMapOf<String, Any>(
                 "sender" to "candidate",
                 "senderRole" to "candidate",
                 "text" to clean,
+                "textOrig" to clean,
                 "origText" to clean,
                 "textOriginal" to clean,
                 "textTranslated" to trans,
-                "textEn" to if (langCode == "ru") trans else clean,
-                "textRu" to if (langCode == "ru") clean else trans,
-                "lang" to if (langCode == "ru") "ru" else "en",
+                "textEn" to textEn,
+                "textRu" to textRu,
+                "lang" to if (isRuText) "ru" else "en",
                 "createdAt" to FieldValue.serverTimestamp()
             )
             messagesColRef(uid).add(msgMap).await()
