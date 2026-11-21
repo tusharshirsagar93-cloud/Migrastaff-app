@@ -3,11 +3,11 @@ package com.example.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 
-private val AuroraPrismColorScheme = darkColorScheme(
+private val AuroraPrismColorScheme = lightColorScheme(
     primary = GlacierCyan,
     onPrimary = DeepNavyInk,
     primaryContainer = GlacierCyanSoft,

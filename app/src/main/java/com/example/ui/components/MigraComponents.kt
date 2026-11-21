@@ -124,7 +124,7 @@ fun AuroraGradientButton(
     val textColor = when {
         !enabled -> ArcticMist
         useMintGradient -> DeepNavyInk
-        else -> IceWhite
+        else -> Color.White
     }
     Button(
         onClick = onClick,
