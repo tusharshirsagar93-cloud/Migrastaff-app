@@ -82,8 +82,11 @@ import com.example.ui.components.AuroraGradientButton
 import com.example.ui.components.StatusTagChip
 import com.example.ui.theme.ArcticMist
 import com.example.ui.theme.AuroraMint
-import com.example.ui.theme.AuroraMintBorder
-import com.example.ui.theme.AuroraMintSoft
+import com.example.ui.theme.DeepNavyInk
+import com.example.ui.theme.AuroraMint
+import com.example.ui.theme.DeepNavyInkBorder
+import com.example.ui.theme.AuroraMint
+import com.example.ui.theme.DeepNavyInkSoft
 import com.example.ui.theme.AuroraPrismBorder
 import com.example.ui.theme.AuroraPrismBorderBrush
 import com.example.ui.theme.AuroraSurface

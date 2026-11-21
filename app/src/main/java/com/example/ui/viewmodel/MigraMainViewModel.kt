@@ -6,6 +6,8 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.MigraCatalogData
+import com.example.data.firebase.MigraFirestoreRepository
+import kotlinx.coroutines.tasks.await
 import com.example.data.auth.GoogleAuthHelper
 import com.example.data.auth.GoogleSignInResult
 import com.example.data.fx.FxRepository
@@ -442,7 +444,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
             _authState.value = AuthUiState.Loading
             try {
                 val resolvedEmail = firestoreRepo.resolveEmailForLogin(raw)
-                val res = firebaseAuth.signInWithEmailAndPassword(resolvedEmail, password).await()
+                val res = FirebaseAuth.getInstance().signInWithEmailAndPassword(resolvedEmail, password).await()
                 val user = res.user ?: throw IllegalStateException("Sign in failed")
                 _authState.value = AuthUiState.SignedIn(
                     uid = user.uid,
@@ -471,7 +473,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
             _authErrorMessage.value = null
             _authState.value = AuthUiState.Loading
             try {
-                val res = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+                val res = FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password).await()
                 val user = res.user ?: throw IllegalStateException("Account creation failed")
                 _authState.value = AuthUiState.SignedIn(
                     uid = user.uid,
@@ -499,7 +501,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             try {
                 val resolved = firestoreRepo.resolveEmailForLogin(raw)
-                firebaseAuth.sendPasswordResetEmail(resolved).await()
+                FirebaseAuth.getInstance().sendPasswordResetEmail(resolved).await()
                 _authErrorMessage.value = null
                 _snackbarMessage.value = if (language.value == AppLang.RU) {
                     "Письмо для сброса пароля отправлено на $resolved"
