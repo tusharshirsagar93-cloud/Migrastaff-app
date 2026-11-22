@@ -234,7 +234,7 @@ fun AboutScreen(
                 )
                 PricingTierCard(
                     title = if (lang == AppLang.RU) "Работодатель — Бизнес" else "Employer — Business",
-                    price = "₽2 990 / mo",
+                    price = "₽2 490 / mo",
                     desc = if (lang == AppLang.RU) {
                         "Безлимитное открытие контактов, до 10 вакансий, 5 рекрутеров."
                     } else {

@@ -23,12 +23,12 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.CurrencyExchange
+import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.Search
@@ -68,7 +68,7 @@ import com.example.ui.components.MigraBrandHeader
 import com.example.ui.components.VacancyDetailSheet
 import com.example.ui.screens.AboutScreen
 import com.example.ui.screens.CryptoScreen
-import com.example.ui.screens.FxScreen
+import com.example.ui.screens.MyApplicationsScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.SearchScreen
 import com.example.ui.theme.ArcticMist
@@ -122,6 +122,11 @@ fun MigraStaffApp(
     val favoriteIds by vm.localFavorites.collectAsStateWithLifecycle()
     val appliedIds by vm.appliedVacancyIds.collectAsStateWithLifecycle()
     val fxState by vm.fxState.collectAsStateWithLifecycle()
+    val myApplications by vm.myApplications.collectAsStateWithLifecycle()
+    val employerProfile by vm.employerProfile.collectAsStateWithLifecycle()
+    val allApplications by vm.allApplications.collectAsStateWithLifecycle()
+    val allEmployers by vm.allEmployers.collectAsStateWithLifecycle()
+    val liveJobs by vm.liveJobsFlow.collectAsStateWithLifecycle()
     val cryptoState by vm.cryptoState.collectAsStateWithLifecycle()
     val selectedVacancy by vm.selectedVacancy.collectAsStateWithLifecycle()
     val selectedTopic by vm.selectedInfoTopic.collectAsStateWithLifecycle()
@@ -160,7 +165,7 @@ fun MigraStaffApp(
 
     val navItems = listOf(
         NavEntry(MainTab.SEARCH, copy.tabSearch, Icons.Filled.Search, Icons.Outlined.Search),
-        NavEntry(MainTab.FX, copy.tabFx, Icons.Filled.CurrencyExchange, Icons.Outlined.CurrencyExchange),
+        NavEntry(MainTab.FX, copy.tabFx, Icons.Filled.Work, Icons.Outlined.Work),
         NavEntry(MainTab.CRYPTO, copy.tabCrypto, Icons.Filled.QrCode2, Icons.Outlined.QrCode2),
         NavEntry(MainTab.ABOUT, copy.tabAbout, Icons.Filled.Info, Icons.Outlined.Info),
         NavEntry(MainTab.PROFILE, copy.tabProfile, Icons.Filled.AccountCircle, Icons.Outlined.AccountCircle)
@@ -332,19 +337,16 @@ fun MigraStaffApp(
                                 onResetFilters = vm::resetFilters,
                                 onToggleFavorite = { job -> vm.toggleLocalFavorite(job.id) },
                                 onOpenVacancy = vm::openVacancyDetail,
-                                onApplyVacancy = { job -> vm.applyToVacancy(job.id) },
+                                onApplyVacancy = { job -> vm.applyToVacancy(job) },
                                 onJumpTab = vm::selectTab
                             )
 
-                            MainTab.FX -> FxScreen(
+                            MainTab.FX -> MyApplicationsScreen(
                                 lang = lang,
-                                fxState = fxState,
-                                onFromChange = vm::setFxFrom,
-                                onToChange = vm::setFxTo,
-                                onAmountChange = vm::setFxAmount,
-                                onSwap = vm::swapFxCurrencies,
-                                onRefresh = { vm.refreshFxRates(manual = true) },
-                                onApplyPreset = vm::applyFxPreset
+                                isSignedIn = authState is AuthUiState.SignedIn,
+                                applications = myApplications,
+                                onBrowseJobs = { vm.selectTab(MainTab.SEARCH) },
+                                onGoToProfile = { vm.selectTab(MainTab.PROFILE) }
                             )
 
                             MainTab.CRYPTO -> CryptoScreen(
@@ -373,6 +375,10 @@ fun MigraStaffApp(
                                 lang = lang,
                                 authState = authState,
                                 authErrorMessage = authError,
+                                employerProfile = employerProfile,
+                                allApplications = allApplications,
+                                allEmployers = allEmployers,
+                                liveJobs = liveJobs,
                                 onGoogleSignIn = {
                                     if (activity != null) {
                                         vm.signInWithGoogle(activity)
@@ -380,7 +386,12 @@ fun MigraStaffApp(
                                 },
                                 onEmailSignIn = vm::signInWithEmail,
                                 onEmailSignUp = vm::signUpWithEmail,
+                                onEmployerRegister = vm::registerEmployerAccount,
                                 onResetPassword = vm::resetPassword,
+                                onUpdateAppStatus = vm::updateApplicationStatus,
+                                onUpdateEmployerStatus = vm::updateEmployerStatus,
+                                onPublishJob = vm::publishJob,
+                                onDeleteJob = vm::deleteJob,
                                 onSignOut = { vm.signOut(context) },
                                 onShowMessage = vm::showMessage
                             )
@@ -398,7 +409,7 @@ fun MigraStaffApp(
             isSignedIn = authState is AuthUiState.SignedIn,
             isApplied = appliedIds.contains(vacancy.id),
             onDismiss = vm::closeVacancyDetail,
-            onApply = { vm.applyToVacancy(vacancy.id) },
+            onApply = { vm.applyToVacancy(vacancy) },
             onGoToProfile = { vm.selectTab(MainTab.PROFILE) }
         )
     }

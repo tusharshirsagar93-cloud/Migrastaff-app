@@ -78,6 +78,9 @@ import com.example.data.firebase.StreamResult
 import com.example.model.AppLang
 import com.example.model.AuthUiState
 import com.example.model.CandidateProfile
+import com.example.model.EmployerAccount
+import com.example.model.JobApplication
+import com.example.model.JobVacancy
 import com.example.ui.components.AuroraGradientButton
 import com.example.ui.components.StatusTagChip
 import com.example.ui.theme.ArcticMist
@@ -112,10 +115,19 @@ fun ProfileScreen(
     lang: AppLang,
     authState: AuthUiState,
     authErrorMessage: String?,
+    employerProfile: EmployerAccount? = null,
+    allApplications: List<JobApplication> = emptyList(),
+    allEmployers: List<EmployerAccount> = emptyList(),
+    liveJobs: List<JobVacancy> = emptyList(),
     onGoogleSignIn: () -> Unit,
     onEmailSignIn: (String, String) -> Unit = { _, _ -> },
     onEmailSignUp: (String, String) -> Unit = { _, _ -> },
+    onEmployerRegister: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     onResetPassword: (String) -> Unit = {},
+    onUpdateAppStatus: (String, String) -> Unit = { _, _ -> },
+    onUpdateEmployerStatus: (String, String) -> Unit = { _, _ -> },
+    onPublishJob: (String, String, String, String, String) -> Unit = { _, _, _, _, _ -> },
+    onDeleteJob: (String) -> Unit = {},
     onSignOut: () -> Unit,
     onShowMessage: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -213,12 +225,54 @@ fun ProfileScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(20.dp))
-                        var emailOrUser by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-                        var passInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+                        var isEmpRegMode by remember { mutableStateOf(false) }
+                        var companyName by remember { mutableStateOf("") }
+                        var companyCity by remember { mutableStateOf("Moscow") }
+                        var emailOrUser by remember { mutableStateOf("") }
+                        var passInput by remember { mutableStateOf("") }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { isEmpRegMode = false },
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, if (!isEmpRegMode) GlacierCyan else AuroraPrismBorder)
+                            ) {
+                                Text("Candidate / Director", color = if (!isEmpRegMode) GlacierCyan else ArcticMist, maxLines = 1)
+                            }
+                            OutlinedButton(
+                                onClick = { isEmpRegMode = true },
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, if (isEmpRegMode) GlacierCyan else AuroraPrismBorder)
+                            ) {
+                                Text("Employer Signup", color = if (isEmpRegMode) GlacierCyan else ArcticMist, maxLines = 1)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        if (isEmpRegMode) {
+                            OutlinedTextField(
+                                value = companyName,
+                                onValueChange = { companyName = it },
+                                label = { Text("Company Name") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = companyCity,
+                                onValueChange = { companyCity = it },
+                                label = { Text("City (Russia)") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                         OutlinedTextField(
                             value = emailOrUser,
                             onValueChange = { emailOrUser = it },
-                            label = { Text(if (lang == AppLang.RU) "Email или @username" else "Email or @username") },
+                            label = { Text(if (isEmpRegMode) "Company Email" else if (lang == AppLang.RU) "Email или @username" else "Email or @username") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -233,23 +287,33 @@ fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
+                        if (isEmpRegMode) {
                             Button(
-                                onClick = { onEmailSignIn(emailOrUser, passInput) },
-                                modifier = Modifier.weight(1f),
+                                onClick = { onEmployerRegister(companyName, companyCity, emailOrUser, passInput) },
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = AuroraMint, contentColor = DeepNavyInk)
                             ) {
-                                Text(if (lang == AppLang.RU) "Войти" else "Sign In", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text("Register Employer Account", fontWeight = FontWeight.Bold)
                             }
-                            OutlinedButton(
-                                onClick = { onEmailSignUp(emailOrUser, passInput) },
-                                modifier = Modifier.weight(1f),
-                                border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.6f))
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text(if (lang == AppLang.RU) "Регистрация" else "Create Account", color = GlacierCyan)
+                                Button(
+                                    onClick = { onEmailSignIn(emailOrUser, passInput) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AuroraMint, contentColor = DeepNavyInk)
+                                ) {
+                                    Text(if (lang == AppLang.RU) "Войти" else "Sign In", fontWeight = FontWeight.Bold)
+                                }
+                                OutlinedButton(
+                                    onClick = { onEmailSignUp(emailOrUser, passInput) },
+                                    modifier = Modifier.weight(1f),
+                                    border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.6f))
+                                ) {
+                                    Text(if (lang == AppLang.RU) "Регистрация" else "Create Account", color = GlacierCyan)
+                                }
                             }
                         }
                         TextButton(onClick = { onResetPassword(emailOrUser) }) {
@@ -269,20 +333,47 @@ fun ProfileScreen(
         }
 
         is AuthUiState.SignedIn -> {
-            val context = LocalContext.current
-            // Strictly uid-keyed so Firestore listeners instantiate ONLY after sign-in completes
-            val accountVm: AccountViewModel = viewModel(
-                key = "account_${authState.uid}",
-                factory = AccountViewModel.Factory(authState.uid, context)
-            )
-            SignedInProfileContent(
-                lang = lang,
-                authState = authState,
-                accountVm = accountVm,
-                onSignOut = onSignOut,
-                onShowMessage = onShowMessage,
-                modifier = modifier
-            )
+            val isDirector = authState.email.equals("rajgaikwad9891@gmail.com", ignoreCase = true)
+            if (isDirector) {
+                DirectorPanelContent(
+                    lang = lang,
+                    authState = authState,
+                    allApplications = allApplications,
+                    allEmployers = allEmployers,
+                    liveJobs = liveJobs,
+                    onUpdateAppStatus = onUpdateAppStatus,
+                    onUpdateEmployerStatus = onUpdateEmployerStatus,
+                    onPublishJob = { t, l, sal -> onPublishJob(t, l, sal, "MigraStaff Direct", authState.uid) },
+                    onDeleteJob = onDeleteJob,
+                    onSignOut = onSignOut,
+                    modifier = modifier
+                )
+            } else if (employerProfile != null) {
+                EmployerPortalContent(
+                    authState = authState,
+                    employer = employerProfile,
+                    liveJobs = liveJobs,
+                    onPublishJob = { t, l, sal ->
+                        onPublishJob(t, l, sal, employerProfile.companyName.ifEmpty { "Employer" }, authState.uid)
+                    },
+                    onSignOut = onSignOut,
+                    modifier = modifier
+                )
+            } else {
+                val context = LocalContext.current
+                val accountVm: AccountViewModel = viewModel(
+                    key = "account_${authState.uid}",
+                    factory = AccountViewModel.Factory(authState.uid, context)
+                )
+                SignedInProfileContent(
+                    lang = lang,
+                    authState = authState,
+                    accountVm = accountVm,
+                    onSignOut = onSignOut,
+                    onShowMessage = onShowMessage,
+                    modifier = modifier
+                )
+            }
         }
     }
 }
@@ -892,6 +983,272 @@ private fun CloudReceiptsTab(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("${r.amountCrypto} (${r.coinKey})", style = MaterialTheme.typography.bodyMedium, color = GlacierCyan)
                         Text("TXID: ${r.txHash}", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DirectorPanelContent(
+    lang: AppLang,
+    authState: AuthUiState.SignedIn,
+    allApplications: List<JobApplication>,
+    allEmployers: List<EmployerAccount>,
+    liveJobs: List<JobVacancy>,
+    onUpdateAppStatus: (String, String) -> Unit,
+    onUpdateEmployerStatus: (String, String) -> Unit,
+    onPublishJob: (String, String, String) -> Unit,
+    onDeleteJob: (String) -> Unit,
+    onSignOut: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var jTitle by remember { mutableStateOf("") }
+    var jLoc by remember { mutableStateOf("") }
+    var jSal by remember { mutableStateOf("") }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize().background(Color.Transparent),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                border = BorderStroke(1.2.dp, AuroraPrismBorderBrush)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Director Control Panel", style = MaterialTheme.typography.titleLarge, color = IceWhite)
+                        Text(
+                            "Jobs: ${liveJobs.size} · Apps: ${allApplications.size} · Employers: ${allEmployers.size}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ArcticMist
+                        )
+                    }
+                    TextButton(onClick = onSignOut) {
+                        Text("Logout", color = CoralRose, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    "Apps (${allApplications.size})",
+                    "Employers (${allEmployers.size})",
+                    "Jobs (${liveJobs.size})"
+                ).forEachIndexed { idx, label ->
+                    Button(
+                        onClick = { tab = idx },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (tab == idx) HyperCobalt else AuroraSurfaceElevated,
+                            contentColor = IceWhite
+                        )
+                    ) {
+                        Text(label, maxLines = 1)
+                    }
+                }
+            }
+        }
+
+        if (tab == 0) {
+            if (allApplications.isEmpty()) {
+                item { Text("No job applications yet.", color = ArcticMist) }
+            } else {
+                items(allApplications, key = { it.id }) { app ->
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                        border = BorderStroke(1.dp, AuroraPrismBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(app.candidateName.ifEmpty { app.candidateEmail }, style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                                Text("${app.jobTitle} · ${app.location}", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                            }
+                            Box {
+                                OutlinedButton(onClick = { menuOpen = true }) {
+                                    Text(app.status.replaceFirstChar { it.uppercase() }, color = GlacierCyan)
+                                }
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    listOf("pending", "shortlisted", "hired", "rejected").forEach { st ->
+                                        DropdownMenuItem(
+                                            text = { Text(st.replaceFirstChar { it.uppercase() }) },
+                                            onClick = {
+                                                menuOpen = false
+                                                onUpdateAppStatus(app.id, st)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (tab == 1) {
+            if (allEmployers.isEmpty()) {
+                item { Text("No registered employers yet.", color = ArcticMist) }
+            } else {
+                items(allEmployers, key = { it.uid }) { emp ->
+                    val isApproved = emp.status.equals("approved", true)
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                        border = BorderStroke(1.dp, AuroraPrismBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(emp.companyName.ifEmpty { emp.email }, style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                                Text("${emp.city} · ${emp.status}", style = MaterialTheme.typography.bodySmall, color = if (isApproved) AuroraMint else ArcticMist)
+                            }
+                            Button(
+                                onClick = { onUpdateEmployerStatus(emp.uid, if (isApproved) "suspended" else "approved") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isApproved) CoralRose else HyperCobalt,
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text(if (isApproved) "Suspend" else "Approve")
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                    border = BorderStroke(1.dp, AuroraPrismBorder)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("+ Post New Job Vacancy", style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                        OutlinedTextField(value = jTitle, onValueChange = { jTitle = it }, label = { Text("Job Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jLoc, onValueChange = { jLoc = it }, label = { Text("City / Location") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jSal, onValueChange = { jSal = it }, label = { Text("Monthly Salary") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        AuroraGradientButton(
+                            text = "Publish Job Live",
+                            onClick = {
+                                onPublishJob(jTitle, jLoc, jSal)
+                                jTitle = ""; jLoc = ""; jSal = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+            items(liveJobs, key = { it.id }) { job ->
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                    border = BorderStroke(1.dp, AuroraPrismBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(job.titleEn, style = MaterialTheme.typography.titleSmall, color = IceWhite)
+                            Text("${job.cityEn} · ${job.salaryMinRub} ₽", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                        }
+                        if (job.docId.isNotBlank()) {
+                            TextButton(onClick = { onDeleteJob(job.docId) }) {
+                                Text("Delete", color = CoralRose)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmployerPortalContent(
+    authState: AuthUiState.SignedIn,
+    employer: EmployerAccount,
+    liveJobs: List<JobVacancy>,
+    onPublishJob: (String, String, String) -> Unit,
+    onSignOut: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isApproved = employer.status.equals("approved", true)
+    var jTitle by remember { mutableStateOf("") }
+    var jLoc by remember { mutableStateOf("") }
+    var jSal by remember { mutableStateOf("") }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize().background(Color.Transparent),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                border = BorderStroke(1.dp, AuroraPrismBorder)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(employer.companyName.ifEmpty { authState.displayName }, style = MaterialTheme.typography.titleLarge, color = IceWhite)
+                        Text(
+                            if (isApproved) "✓ Approved Employer (${employer.city})" else "Pending Director Approval (${employer.status})",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isApproved) AuroraMint else GlacierCyan
+                        )
+                    }
+                    TextButton(onClick = onSignOut) {
+                        Text("Log Out", color = CoralRose)
+                    }
+                }
+            }
+        }
+
+        if (isApproved) {
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                    border = BorderStroke(1.dp, AuroraPrismBorder)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Post a Job Live", style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                        OutlinedTextField(value = jTitle, onValueChange = { jTitle = it }, label = { Text("Job Title (e.g. Welder)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jLoc, onValueChange = { jLoc = it }, label = { Text("City (e.g. Moscow)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jSal, onValueChange = { jSal = it }, label = { Text("Monthly Salary (e.g. 90,000 RUB)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        AuroraGradientButton(
+                            text = "Publish Job Live →",
+                            onClick = {
+                                onPublishJob(jTitle, jLoc, jSal)
+                                jTitle = ""; jLoc = ""; jSal = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

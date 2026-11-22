@@ -5,7 +5,9 @@ import com.example.R
 import com.example.data.MigraCatalogData
 import com.example.model.CandidateProfile
 import com.example.model.CryptoPaymentReceipt
+import com.example.model.EmployerAccount
 import com.example.model.FavoriteWorker
+import com.example.model.JobApplication
 import com.example.model.JobVacancy
 import com.example.model.SupportMessage
 import com.example.model.WorkerProfile
@@ -109,7 +111,8 @@ class MigraFirestoreRepository(
             descEn = "$titleEn in $cityEn · Salary: $salaryStr. Apply directly through MigraStaff Director.",
             descRu = "$titleRu ($cityRu) · Зарплата: $salaryStr. Отклик напрямую через директора MigraStaff.",
             hrPhone = "+7 912 850-03-33",
-            hrEmail = "migrapro@imap.mail.ru"
+            hrEmail = "migrapro@imap.mail.ru",
+            docId = doc.id
         )
     }
 
@@ -414,4 +417,220 @@ class MigraFirestoreRepository(
             Result.failure(FirestoreErrorHandler.handleFirestoreError(error, OperationType.CREATE, path))
         }
     }
+
+    suspend fun applyToJob(vacancy: JobVacancy): Result<Unit> {
+        val uid = runCatching { requireUserId() }.getOrElse { return Result.failure(it) }
+        val jId = vacancy.docId.ifEmpty { vacancy.id.toString() }
+        return try {
+            val existing = db.collection("applications")
+                .whereEqualTo("candidateUid", uid)
+                .whereEqualTo("jobId", jId)
+                .get()
+                .await()
+            if (!existing.isEmpty) return Result.success(Unit)
+            val candDoc = runCatching { profileDocRef(uid).get().await() }.getOrNull()
+            val cName = candDoc?.getString("fullName")?.takeIf { it.isNotBlank() }
+                ?: auth.currentUser?.displayName?.takeIf { it.isNotBlank() }
+                ?: auth.currentUser?.email?.substringBefore("@")
+                ?: "Candidate"
+            val cEmail = auth.currentUser?.email.orEmpty()
+            val salStr = if (vacancy.salaryMinRub == vacancy.salaryMaxRub) {
+                "${vacancy.salaryMinRub}"
+            } else {
+                "${vacancy.salaryMinRub} - ${vacancy.salaryMaxRub}"
+            }
+            val data = hashMapOf<String, Any>(
+                "jobId" to jId,
+                "jobTitle" to vacancy.titleEn,
+                "location" to vacancy.cityEn,
+                "salary" to salStr,
+                "candidateUid" to uid,
+                "candidateName" to cName,
+                "candidateEmail" to cEmail,
+                "status" to "pending",
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+            db.collection("applications").add(data).await()
+            Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Result.failure(FirestoreErrorHandler.handleFirestoreError(error, OperationType.CREATE, "applications"))
+        }
+    }
+
+    fun observeMyApplications(uid: String): Flow<List<JobApplication>> {
+        return db.collection("applications")
+            .whereEqualTo("candidateUid", uid)
+            .snapshots()
+            .map { snap ->
+                snap.documents.map { d ->
+                    JobApplication(
+                        id = d.id,
+                        jobId = d.getString("jobId").orEmpty(),
+                        jobTitle = d.getString("jobTitle").orEmpty(),
+                        location = d.getString("location").orEmpty(),
+                        salary = d.getString("salary").orEmpty(),
+                        candidateUid = d.getString("candidateUid").orEmpty(),
+                        candidateName = d.getString("candidateName").orEmpty(),
+                        candidateEmail = d.getString("candidateEmail").orEmpty(),
+                        status = d.getString("status")?.ifEmpty { "pending" } ?: "pending"
+                    )
+                }
+            }
+            .catch { error ->
+                if (error is CancellationException) throw error
+                emit(emptyList())
+            }
+    }
+
+    fun observeAllApplications(): Flow<List<JobApplication>> {
+        return db.collection("applications")
+            .snapshots()
+            .map { snap ->
+                snap.documents.map { d ->
+                    JobApplication(
+                        id = d.id,
+                        jobId = d.getString("jobId").orEmpty(),
+                        jobTitle = d.getString("jobTitle").orEmpty(),
+                        location = d.getString("location").orEmpty(),
+                        salary = d.getString("salary").orEmpty(),
+                        candidateUid = d.getString("candidateUid").orEmpty(),
+                        candidateName = d.getString("candidateName").orEmpty(),
+                        candidateEmail = d.getString("candidateEmail").orEmpty(),
+                        status = d.getString("status")?.ifEmpty { "pending" } ?: "pending"
+                    )
+                }
+            }
+            .catch { error ->
+                if (error is CancellationException) throw error
+                emit(emptyList())
+            }
+    }
+
+    suspend fun updateApplicationStatus(appId: String, status: String): Result<Unit> {
+        return try {
+            db.collection("applications").document(appId)
+                .update(mapOf("status" to status, "updatedAt" to FieldValue.serverTimestamp()))
+                .await()
+            Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Result.failure(error)
+        }
+    }
+
+    fun observeAllEmployers(): Flow<List<EmployerAccount>> {
+        return db.collection("employers")
+            .snapshots()
+            .map { snap ->
+                snap.documents.map { d ->
+                    EmployerAccount(
+                        uid = d.id,
+                        companyName = d.getString("companyName").orEmpty(),
+                        city = d.getString("city").orEmpty(),
+                        email = d.getString("email").orEmpty(),
+                        status = d.getString("status")?.ifEmpty { "pending" } ?: "pending"
+                    )
+                }
+            }
+            .catch { error ->
+                if (error is CancellationException) throw error
+                emit(emptyList())
+            }
+    }
+
+    suspend fun updateEmployerStatus(empUid: String, status: String): Result<Unit> {
+        return try {
+            db.collection("employers").document(empUid)
+                .update(mapOf("status" to status, "updatedAt" to FieldValue.serverTimestamp()))
+                .await()
+            Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Result.failure(error)
+        }
+    }
+
+    fun observeEmployerProfile(uid: String): Flow<EmployerAccount?> {
+        return db.collection("employers").document(uid)
+            .snapshots()
+            .map { d ->
+                if (!d.exists()) null
+                else EmployerAccount(
+                    uid = d.id,
+                    companyName = d.getString("companyName").orEmpty(),
+                    city = d.getString("city").orEmpty(),
+                    email = d.getString("email").orEmpty(),
+                    status = d.getString("status")?.ifEmpty { "pending" } ?: "pending"
+                )
+            }
+            .catch { error ->
+                if (error is CancellationException) throw error
+                emit(null)
+            }
+    }
+
+    suspend fun registerEmployerProfile(uid: String, companyName: String, city: String, email: String): Result<Unit> {
+        return try {
+            val data = hashMapOf<String, Any>(
+                "uid" to uid,
+                "companyName" to companyName.trim(),
+                "city" to city.trim().ifEmpty { "Moscow" },
+                "email" to email.trim().lowercase(),
+                "status" to "pending",
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+            db.collection("employers").document(uid).set(data, SetOptions.merge()).await()
+            Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Result.failure(error)
+        }
+    }
+
+    suspend fun publishJob(
+        title: String,
+        location: String,
+        salary: String,
+        companyName: String,
+        employerUid: String
+    ): Result<Unit> {
+        return try {
+            val t = title.trim()
+            val l = location.trim()
+            val tRu = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                translateTextSync(t, "ru").ifEmpty { t }
+            }
+            val lRu = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                translateTextSync(l, "ru").ifEmpty { l }
+            }
+            val data = hashMapOf<String, Any>(
+                "title" to t,
+                "titleRu" to tRu,
+                "location" to l,
+                "locationRu" to lRu,
+                "salary" to salary.trim(),
+                "salaryRu" to salary.trim(),
+                "companyName" to companyName,
+                "employerUid" to employerUid,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+            db.collection("jobs").add(data).await()
+            Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Result.failure(error)
+        }
+    }
+
+    suspend fun deleteJob(jobDocId: String): Result<Unit> {
+        return try {
+            db.collection("jobs").document(jobDocId).delete().await()
+            Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Result.failure(error)
+        }
+    }
+
 }

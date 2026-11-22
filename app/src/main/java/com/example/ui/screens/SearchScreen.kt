@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Groups
@@ -230,7 +229,7 @@ fun SearchScreen(
                     QuickActionCard(
                         title = copy.quickFxTitle,
                         subtitle = copy.quickFxSub,
-                        icon = Icons.Filled.CurrencyExchange,
+                        icon = Icons.Filled.Work,
                         badgeBg = AuroraMintSoft,
                         badgeTint = AuroraMint,
                         accentBorder = AuroraMint.copy(alpha = 0.35f),

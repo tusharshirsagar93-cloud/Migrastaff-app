@@ -850,7 +850,7 @@ object MigraCatalogData {
             nameRu = "Работодатель — Бизнес",
             descEn = "Unlimited unlocks + 10 jobs",
             descRu = "Безлимит контактов и 10 вакансий",
-            rubAmount = 2990.0
+            rubAmount = 2490.0
         ),
         CryptoPlan(
             key = "unlock",

@@ -13,6 +13,8 @@ import com.example.data.auth.GoogleSignInResult
 import com.example.data.fx.FxRepository
 import com.example.data.prefs.MigraPreferencesRepository
 import com.example.model.AppLang
+import com.example.model.EmployerAccount
+import com.example.model.JobApplication
 import com.example.model.AuthUiState
 import com.example.model.InfoTopic
 import com.example.model.JobVacancy
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 data class BrowseFilterState(
@@ -77,8 +80,17 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
     val localFavorites: StateFlow<Set<Int>> = prefsRepo.localFavoritesFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val appliedVacancyIds: StateFlow<Set<Int>> = prefsRepo.appliedVacancyIdsFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    val appliedVacancyIds: StateFlow<Set<Int>> = combine(
+        prefsRepo.appliedVacancyIdsFlow,
+        _myApplications,
+        liveJobsFlow
+    ) { localIds, cloudApps, jobs ->
+        val cloudJobIds = cloudApps.map { it.jobId }.toSet()
+        val matchedIds = jobs.filter {
+            cloudJobIds.contains(it.docId) || cloudJobIds.contains(it.id.toString())
+        }.map { it.id }.toSet()
+        localIds + matchedIds
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private val _activeTab = MutableStateFlow(MainTab.SEARCH)
     val activeTab: StateFlow<MainTab> = _activeTab.asStateFlow()
@@ -110,8 +122,23 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
-    private val liveJobsFlow: StateFlow<List<JobVacancy>> = firestoreRepo.observeLiveJobs()
+    val liveJobsFlow: StateFlow<List<JobVacancy>> = firestoreRepo.observeLiveJobs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _myApplications = MutableStateFlow<List<JobApplication>>(emptyList())
+    val myApplications: StateFlow<List<JobApplication>> = _myApplications.asStateFlow()
+
+    private val _employerProfile = MutableStateFlow<EmployerAccount?>(null)
+    val employerProfile: StateFlow<EmployerAccount?> = _employerProfile.asStateFlow()
+
+    private val _allApplications = MutableStateFlow<List<JobApplication>>(emptyList())
+    val allApplications: StateFlow<List<JobApplication>> = _allApplications.asStateFlow()
+
+    private val _allEmployers = MutableStateFlow<List<EmployerAccount>>(emptyList())
+    val allEmployers: StateFlow<List<EmployerAccount>> = _allEmployers.asStateFlow()
+
+    private var userStreamsJob: Job? = null
+
 
     val filteredVacancies: StateFlow<List<JobVacancy>> = combine(
         _filterState,
@@ -150,6 +177,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
     init {
         val current = runCatching { FirebaseAuth.getInstance().currentUser }.getOrNull()
         _authState.value = if (current != null) {
+            startUserStreams(current.uid, current.email ?: "")
             AuthUiState.SignedIn(
                 uid = current.uid,
                 displayName = current.displayName ?: "MigraStaff User",
@@ -242,15 +270,24 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch { prefsRepo.toggleLocalFavorite(vacancyId) }
     }
 
-    fun applyToVacancy(vacancyId: Int) {
+    fun applyToVacancy(vacancy: JobVacancy) {
         viewModelScope.launch {
-            prefsRepo.markVacancyApplied(vacancyId)
-            val msg = if (language.value == AppLang.RU) {
-                "Отклик отправлен! Контакты HR открыты."
+            prefsRepo.markVacancyApplied(vacancy.id)
+            val isSignedIn = _authState.value is AuthUiState.SignedIn
+            if (isSignedIn) {
+                val res = firestoreRepo.applyToJob(vacancy)
+                _snackbarMessage.value = if (res.isSuccess) {
+                    if (language.value == AppLang.RU) "Отклик отправлен и сохранён!" else "Application sent & synced!"
+                } else {
+                    if (language.value == AppLang.RU) "Отклик сохранён локально" else "Saved locally (check sign-in)"
+                }
             } else {
-                "Application sent! Direct HR contact unlocked."
+                _snackbarMessage.value = if (language.value == AppLang.RU) {
+                    "Войдите в Профиль, чтобы сохранить отклик в облаке"
+                } else {
+                    "Applied locally! Sign in on Profile to sync status."
+                }
             }
-            _snackbarMessage.value = msg
         }
     }
 
@@ -376,6 +413,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
             when (res) {
                 is GoogleSignInResult.Success -> {
                     _authErrorMessage.value = null
+                    startUserStreams(res.user.uid, res.user.email ?: "")
                     _authState.value = AuthUiState.SignedIn(
                         uid = res.user.uid,
                         displayName = res.user.displayName ?: "MigraStaff User",
@@ -402,6 +440,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
             _authState.value = AuthUiState.Loading
             when (val res = authHelper.signInWithGoogle(activity)) {
                 is GoogleSignInResult.Success -> {
+                    startUserStreams(res.user.uid, res.user.email ?: "")
                     _authState.value = AuthUiState.SignedIn(
                         uid = res.user.uid,
                         displayName = res.user.displayName ?: "MigraStaff User",
@@ -446,6 +485,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
                 val resolvedEmail = firestoreRepo.resolveEmailForLogin(raw)
                 val res = FirebaseAuth.getInstance().signInWithEmailAndPassword(resolvedEmail, password).await()
                 val user = res.user ?: throw IllegalStateException("Sign in failed")
+                startUserStreams(user.uid, user.email ?: resolvedEmail)
                 _authState.value = AuthUiState.SignedIn(
                     uid = user.uid,
                     displayName = user.displayName ?: resolvedEmail.substringBefore("@"),
@@ -475,6 +515,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val res = FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password).await()
                 val user = res.user ?: throw IllegalStateException("Account creation failed")
+                startUserStreams(user.uid, user.email ?: email)
                 _authState.value = AuthUiState.SignedIn(
                     uid = user.uid,
                     displayName = email.substringBefore("@"),
@@ -516,6 +557,11 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun signOut(context: Context) {
         viewModelScope.launch {
+            userStreamsJob?.cancel()
+            _myApplications.value = emptyList()
+            _employerProfile.value = null
+            _allApplications.value = emptyList()
+            _allEmployers.value = emptyList()
             authHelper.signOut(context)
             _authState.value = AuthUiState.SignedOut
             _authErrorMessage.value = null
@@ -530,4 +576,93 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
+
+    private fun startUserStreams(uid: String, email: String) {
+        userStreamsJob?.cancel()
+        userStreamsJob = viewModelScope.launch {
+            launch {
+                firestoreRepo.observeMyApplications(uid).collect { _myApplications.value = it }
+            }
+            launch {
+                firestoreRepo.observeEmployerProfile(uid).collect { _employerProfile.value = it }
+            }
+            if (email.equals("rajgaikwad9891@gmail.com", ignoreCase = true)) {
+                launch {
+                    firestoreRepo.observeAllApplications().collect { _allApplications.value = it }
+                }
+                launch {
+                    firestoreRepo.observeAllEmployers().collect { _allEmployers.value = it }
+                }
+            } else {
+                _allApplications.value = emptyList()
+                _allEmployers.value = emptyList()
+            }
+        }
+    }
+
+    fun registerEmployerAccount(companyName: String, city: String, emailInput: String, password: String) {
+        val email = emailInput.trim().lowercase()
+        if (companyName.trim().length < 2 || !email.contains("@") || password.length < 6) {
+            _authErrorMessage.value = if (language.value == AppLang.RU) {
+                "Заполните название компании, Email и пароль (от 6 символов)"
+            } else {
+                "Enter company name, valid Email, and password (6+ chars)"
+            }
+            return
+        }
+        viewModelScope.launch {
+            _authErrorMessage.value = null
+            _authState.value = AuthUiState.Loading
+            try {
+                val res = FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password).await()
+                val user = res.user ?: throw IllegalStateException("Registration failed")
+                firestoreRepo.registerEmployerProfile(user.uid, companyName, city, email)
+                startUserStreams(user.uid, email)
+                _authState.value = AuthUiState.SignedIn(
+                    uid = user.uid,
+                    displayName = companyName.trim(),
+                    email = email,
+                    isAutoSignedIn = false
+                )
+                _snackbarMessage.value = "Company registered! Pending Director approval."
+            } catch (e: Exception) {
+                _authState.value = AuthUiState.SignedOut
+                _authErrorMessage.value = e.localizedMessage ?: "Could not register employer"
+            }
+        }
+    }
+
+    fun updateApplicationStatus(appId: String, status: String) {
+        viewModelScope.launch {
+            val res = firestoreRepo.updateApplicationStatus(appId, status)
+            _snackbarMessage.value = if (res.isSuccess) "Status updated: $status" else "Update failed"
+        }
+    }
+
+    fun updateEmployerStatus(empUid: String, status: String) {
+        viewModelScope.launch {
+            val res = firestoreRepo.updateEmployerStatus(empUid, status)
+            _snackbarMessage.value = if (res.isSuccess) "Employer: $status" else "Update failed"
+        }
+    }
+
+    fun publishJob(title: String, location: String, salary: String, companyName: String, employerUid: String) {
+        if (title.isBlank() || location.isBlank() || salary.isBlank()) {
+            _snackbarMessage.value = "Fill job title, location, and salary"
+            return
+        }
+        viewModelScope.launch {
+            val res = firestoreRepo.publishJob(title, location, salary, companyName, employerUid)
+            _snackbarMessage.value = if (res.isSuccess) "Job published live!" else "Could not publish job"
+        }
+    }
+
+    fun deleteJob(jobDocId: String) {
+        if (jobDocId.isBlank()) return
+        viewModelScope.launch {
+            val res = firestoreRepo.deleteJob(jobDocId)
+            _snackbarMessage.value = if (res.isSuccess) "Job deleted" else "Delete failed"
+        }
+    }
+
 }

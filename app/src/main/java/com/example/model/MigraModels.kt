@@ -216,7 +216,8 @@ data class JobVacancy(
     val descEn: String,
     val descRu: String,
     val hrPhone: String,
-    val hrEmail: String
+    val hrEmail: String,
+    val docId: String = ""
 )
 
 data class ProfessionCategory(
@@ -289,3 +290,23 @@ sealed interface AuthUiState {
         val isAutoSignedIn: Boolean = false
     ) : AuthUiState
 }
+
+data class JobApplication(
+    val id: String = "",
+    val jobId: String = "",
+    val jobTitle: String = "",
+    val location: String = "",
+    val salary: String = "",
+    val candidateUid: String = "",
+    val candidateName: String = "",
+    val candidateEmail: String = "",
+    val status: String = "pending"
+)
+
+data class EmployerAccount(
+    val uid: String = "",
+    val companyName: String = "",
+    val city: String = "",
+    val email: String = "",
+    val status: String = "pending"
+)
