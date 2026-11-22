@@ -80,17 +80,6 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
     val localFavorites: StateFlow<Set<Int>> = prefsRepo.localFavoritesFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val appliedVacancyIds: StateFlow<Set<Int>> = combine(
-        prefsRepo.appliedVacancyIdsFlow,
-        _myApplications,
-        liveJobsFlow
-    ) { localIds, cloudApps, jobs ->
-        val cloudJobIds = cloudApps.map { it.jobId }.toSet()
-        val matchedIds = jobs.filter {
-            cloudJobIds.contains(it.docId) || cloudJobIds.contains(it.id.toString())
-        }.map { it.id }.toSet()
-        localIds + matchedIds
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private val _activeTab = MutableStateFlow(MainTab.SEARCH)
     val activeTab: StateFlow<MainTab> = _activeTab.asStateFlow()
@@ -138,6 +127,18 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
     val allEmployers: StateFlow<List<EmployerAccount>> = _allEmployers.asStateFlow()
 
     private var userStreamsJob: Job? = null
+
+    val appliedVacancyIds: StateFlow<Set<Int>> = combine(
+        prefsRepo.appliedVacancyIdsFlow,
+        _myApplications,
+        liveJobsFlow
+    ) { localIds, cloudApps, jobs ->
+        val cloudJobIds = cloudApps.map { it.jobId }.toSet()
+        val matchedIds = jobs.filter {
+            cloudJobIds.contains(it.docId) || cloudJobIds.contains(it.id.toString())
+        }.map { it.id }.toSet()
+        localIds + matchedIds
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
 
     val filteredVacancies: StateFlow<List<JobVacancy>> = combine(
