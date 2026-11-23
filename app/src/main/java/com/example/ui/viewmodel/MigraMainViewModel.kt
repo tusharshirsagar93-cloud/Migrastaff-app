@@ -199,12 +199,17 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                 }
             }
-            refreshFxRates(manual = false)
         }
     }
 
+    private var fxFetchedOnce = false
+
     fun selectTab(tab: MainTab) {
         _activeTab.value = tab
+        if (tab == MainTab.CRYPTO && !fxFetchedOnce) {
+            fxFetchedOnce = true
+            refreshFxRates(manual = false)
+        }
     }
 
     fun toggleLanguage() {

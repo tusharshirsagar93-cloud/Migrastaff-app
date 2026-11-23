@@ -1065,7 +1065,7 @@ private fun DirectorPanelContent(
             if (allApplications.isEmpty()) {
                 item { Text("No job applications yet.", color = ArcticMist) }
             } else {
-                items(allApplications, key = { it.id }) { app ->
+                items(allApplications, key = { it.id }, contentType = { "dir_app" }) { app ->
                     var menuOpen by remember { mutableStateOf(false) }
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -1105,7 +1105,7 @@ private fun DirectorPanelContent(
             if (allEmployers.isEmpty()) {
                 item { Text("No registered employers yet.", color = ArcticMist) }
             } else {
-                items(allEmployers, key = { it.uid }) { emp ->
+                items(allEmployers, key = { it.uid }, contentType = { "dir_emp" }) { emp ->
                     val isApproved = emp.status.equals("approved", true)
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -1157,7 +1157,7 @@ private fun DirectorPanelContent(
                     }
                 }
             }
-            items(liveJobs, key = { it.id }) { job ->
+            items(liveJobs, key = { it.id }, contentType = { "dir_job" }) { job ->
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = AuroraSurface),

@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,11 +98,11 @@ fun SearchScreen(
     modifier: Modifier = Modifier
 ) {
     val copy = MigraStrings.of(lang)
-    val activeFilterCount = listOfNotNull(
-        filterState.selectedCountry.takeIf { it.isNotEmpty() },
-        filterState.selectedProfession.takeIf { it.isNotEmpty() },
-        if (filterState.verifiedOnly) "v" else null
-    ).size
+    val activeFilterCount = remember(filterState) {
+        (if (filterState.selectedCountry.isNotEmpty()) 1 else 0) +
+            (if (filterState.selectedProfession.isNotEmpty()) 1 else 0) +
+            (if (filterState.verifiedOnly) 1 else 0)
+    }
 
     LazyColumn(
         modifier = modifier
@@ -390,7 +391,7 @@ fun SearchScreen(
                 }
             }
         } else {
-            items(vacancies, key = { it.id }) { vacancy ->
+            items(vacancies, key = { it.id }, contentType = { "vacancy" }) { vacancy ->
                 VacancyCard(
                     vacancy = vacancy,
                     lang = lang,
