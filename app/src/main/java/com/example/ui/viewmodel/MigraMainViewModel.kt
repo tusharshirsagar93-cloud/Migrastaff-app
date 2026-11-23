@@ -7,6 +7,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.MigraCatalogData
 import com.example.data.firebase.MigraFirestoreRepository
+import com.example.data.firebase.StreamResult
+import com.example.util.MigraNotificationHelper
 import kotlinx.coroutines.tasks.await
 import com.example.data.auth.GoogleAuthHelper
 import com.example.data.auth.GoogleSignInResult
@@ -587,7 +589,46 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
         userStreamsJob?.cancel()
         userStreamsJob = viewModelScope.launch {
             launch {
-                firestoreRepo.observeMyApplications(uid).collect { _myApplications.value = it }
+                var prevStatuses: Map<String, String>? = null
+                firestoreRepo.observeMyApplications(uid).collect { list ->
+                    _myApplications.value = list
+                    val prev = prevStatuses
+                    if (prev != null) {
+                        list.forEach { app ->
+                            val oldSt = prev[app.id]
+                            if (oldSt != null && oldSt != app.status) {
+                                MigraNotificationHelper.show(
+                                    getApplication(),
+                                    app.id.hashCode(),
+                                    "Application Update: ${app.jobTitle}",
+                                    "Your status is now ${app.status.uppercase()}"
+                                )
+                            }
+                        }
+                    }
+                    prevStatuses = list.associate { it.id to it.status }
+                }
+            }
+            launch {
+                var prevMsgIds: Set<String>? = null
+                firestoreRepo.observeMessages(uid).collect { res ->
+                    if (res is StreamResult.Success) {
+                        val msgs = res.data
+                        val prev = prevMsgIds
+                        if (prev != null) {
+                            msgs.filter { !prev.contains(it.id) && it.senderRole == "director" }
+                                .forEach { m ->
+                                    MigraNotificationHelper.show(
+                                        getApplication(),
+                                        m.id.hashCode(),
+                                        "New Message from Director",
+                                        m.textOriginal.take(120)
+                                    )
+                                }
+                        }
+                        prevMsgIds = msgs.map { it.id }.toSet()
+                    }
+                }
             }
             launch {
                 firestoreRepo.observeEmployerProfile(uid).collect { _employerProfile.value = it }
