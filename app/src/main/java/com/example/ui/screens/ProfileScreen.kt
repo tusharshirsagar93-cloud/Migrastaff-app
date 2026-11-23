@@ -31,6 +31,9 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -230,6 +233,7 @@ fun ProfileScreen(
                         var companyCity by remember { mutableStateOf("Moscow") }
                         var emailOrUser by remember { mutableStateOf("") }
                         var passInput by remember { mutableStateOf("") }
+                        var showPass by remember { mutableStateOf(false) }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -282,8 +286,17 @@ fun ProfileScreen(
                             onValueChange = { passInput = it },
                             label = { Text(if (lang == AppLang.RU) "Пароль" else "Password") },
                             singleLine = true,
-                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            visualTransformation = if (showPass) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                            trailingIcon = {
+                                IconButton(onClick = { showPass = !showPass }) {
+                                    Icon(
+                                        imageVector = if (showPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                        contentDescription = if (showPass) "Hide password" else "Show password",
+                                        tint = ArcticMist
+                                    )
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(12.dp))
