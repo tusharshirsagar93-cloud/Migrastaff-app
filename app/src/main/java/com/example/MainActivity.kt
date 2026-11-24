@@ -134,6 +134,7 @@ fun MigraStaffApp(
     val employerProfile by vm.employerProfile.collectAsStateWithLifecycle()
     val allApplications by vm.allApplications.collectAsStateWithLifecycle()
     val allEmployers by vm.allEmployers.collectAsStateWithLifecycle()
+    val allCandidates by vm.allCandidates.collectAsStateWithLifecycle()
     val liveJobs by vm.liveJobsFlow.collectAsStateWithLifecycle()
     val cryptoState by vm.cryptoState.collectAsStateWithLifecycle()
     val selectedVacancy by vm.selectedVacancy.collectAsStateWithLifecycle()
@@ -386,6 +387,7 @@ fun MigraStaffApp(
                                 employerProfile = employerProfile,
                                 allApplications = allApplications,
                                 allEmployers = allEmployers,
+                                allCandidates = allCandidates,
                                 liveJobs = liveJobs,
                                 onGoogleSignIn = {
                                     if (activity != null) {
@@ -400,6 +402,9 @@ fun MigraStaffApp(
                                 onUpdateEmployerStatus = vm::updateEmployerStatus,
                                 onPublishJob = vm::publishJob,
                                 onDeleteJob = vm::deleteJob,
+                                onVerifyCandidate = vm::setCandidateVerified,
+                                onBanCandidate = vm::setCandidateBanned,
+                                onDeleteCandidate = vm::deleteCandidate,
                                 onSignOut = { vm.signOut(context) },
                                 onShowMessage = vm::showMessage
                             )

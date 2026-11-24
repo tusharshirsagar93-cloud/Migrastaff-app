@@ -184,6 +184,7 @@ class MigraFirestoreRepository(
                             dateOfBirth = doc.getString("dateOfBirth").orEmpty(),
                             verStatus = if (isVer) "verified" else "pending",
                             photoCount = photos,
+                            banned = doc.getBoolean("banned") == true,
                             createdAt = doc.getTimestamp("createdAt"),
                             updatedAt = doc.getTimestamp("updatedAt")
                         )
@@ -632,5 +633,55 @@ class MigraFirestoreRepository(
             Result.failure(error)
         }
     }
+
+
+    fun observeAllCandidates(): Flow<List<CandidateProfile>> {
+        return db.collection("candidates").snapshots().map { snap ->
+            snap.documents.map { doc ->
+                val expVal = when (val raw = doc.get("experienceYears")) {
+                    is Number -> raw.toInt()
+                    is String -> raw.filter { it.isDigit() }.toIntOrNull() ?: 1
+                    else -> 1
+                }
+                val salVal = when (val raw = doc.get("expectedSalary")) {
+                    is Number -> raw.toInt()
+                    is String -> raw.filter { it.isDigit() }.toIntOrNull() ?: 60000
+                    else -> 60000
+                }
+                val isVer = doc.getBoolean("verified") == true || doc.getString("verStatus")?.equals("verified", true) == true
+                CandidateProfile(
+                    id = doc.id, userId = doc.getString("uid") ?: doc.id,
+                    username = doc.getString("username").orEmpty(),
+                    surname = doc.getString("surname").orEmpty(),
+                    firstName = doc.getString("firstName").orEmpty(),
+                    countryCode = doc.getString("countryCode")?.ifEmpty { "IN" } ?: "IN",
+                    profession = doc.getString("profession")?.ifEmpty { "Worker" } ?: "Worker",
+                    experienceYears = expVal, expectedSalary = salVal,
+                    phone = doc.getString("phone").orEmpty(),
+                    verStatus = if (isVer) "verified" else "pending",
+                    banned = doc.getBoolean("banned") == true
+                )
+            }
+        }.catch { e -> if (e is CancellationException) throw e; emit(emptyList()) }
+    }
+
+    suspend fun setCandidateVerified(uid: String, verified: Boolean): Result<Unit> = try {
+        db.collection("candidates").document(uid).update(mapOf("verified" to verified, "updatedAt" to FieldValue.serverTimestamp())).await()
+        Result.success(Unit)
+    } catch (e: Exception) { if (e is CancellationException) throw e; Result.failure(e) }
+
+    suspend fun setCandidateBanned(uid: String, banned: Boolean): Result<Unit> = try {
+        val m = hashMapOf<String, Any>("banned" to banned, "updatedAt" to FieldValue.serverTimestamp())
+        if (banned) m["verified"] = false
+        db.collection("candidates").document(uid).update(m).await()
+        Result.success(Unit)
+    } catch (e: Exception) { if (e is CancellationException) throw e; Result.failure(e) }
+
+    suspend fun deleteCandidate(uid: String, username: String): Result<Unit> = try {
+        db.collection("candidates").document(uid).delete().await()
+        val u = username.trim().lowercase()
+        if (u.isNotEmpty()) runCatching { db.collection("usernames").document(u).delete().await() }
+        Result.success(Unit)
+    } catch (e: Exception) { if (e is CancellationException) throw e; Result.failure(e) }
 
 }

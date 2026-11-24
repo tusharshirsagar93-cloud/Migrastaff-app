@@ -15,6 +15,7 @@ import com.example.data.auth.GoogleSignInResult
 import com.example.data.fx.FxRepository
 import com.example.data.prefs.MigraPreferencesRepository
 import com.example.model.AppLang
+import com.example.model.CandidateProfile
 import com.example.model.EmployerAccount
 import com.example.model.JobApplication
 import com.example.model.AuthUiState
@@ -127,6 +128,9 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _allEmployers = MutableStateFlow<List<EmployerAccount>>(emptyList())
     val allEmployers: StateFlow<List<EmployerAccount>> = _allEmployers.asStateFlow()
+
+    private val _allCandidates = MutableStateFlow<List<CandidateProfile>>(emptyList())
+    val allCandidates: StateFlow<List<CandidateProfile>> = _allCandidates.asStateFlow()
 
     private var userStreamsJob: Job? = null
 
@@ -570,6 +574,7 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
             _employerProfile.value = null
             _allApplications.value = emptyList()
             _allEmployers.value = emptyList()
+                _allCandidates.value = emptyList()
             authHelper.signOut(context)
             _authState.value = AuthUiState.SignedOut
             _authErrorMessage.value = null
@@ -640,9 +645,13 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
                 launch {
                     firestoreRepo.observeAllEmployers().collect { _allEmployers.value = it }
                 }
+                launch {
+                    firestoreRepo.observeAllCandidates().collect { _allCandidates.value = it }
+                }
             } else {
                 _allApplications.value = emptyList()
                 _allEmployers.value = emptyList()
+                _allCandidates.value = emptyList()
             }
         }
     }
@@ -709,6 +718,26 @@ class MigraMainViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val res = firestoreRepo.deleteJob(jobDocId)
             _snackbarMessage.value = if (res.isSuccess) "Job deleted" else "Delete failed"
+        }
+    }
+
+
+    fun setCandidateVerified(uid: String, verified: Boolean) {
+        viewModelScope.launch {
+            val res = firestoreRepo.setCandidateVerified(uid, verified)
+            _snackbarMessage.value = if (res.isSuccess) (if (verified) "Candidate verified" else "Candidate pending") else "Update failed"
+        }
+    }
+    fun setCandidateBanned(uid: String, banned: Boolean) {
+        viewModelScope.launch {
+            val res = firestoreRepo.setCandidateBanned(uid, banned)
+            _snackbarMessage.value = if (res.isSuccess) (if (banned) "Candidate banned" else "Candidate unbanned") else "Update failed"
+        }
+    }
+    fun deleteCandidate(uid: String, username: String) {
+        viewModelScope.launch {
+            val res = firestoreRepo.deleteCandidate(uid, username)
+            _snackbarMessage.value = if (res.isSuccess) "Candidate deleted" else "Delete failed"
         }
     }
 

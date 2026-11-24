@@ -121,6 +121,7 @@ fun ProfileScreen(
     employerProfile: EmployerAccount? = null,
     allApplications: List<JobApplication> = emptyList(),
     allEmployers: List<EmployerAccount> = emptyList(),
+    allCandidates: List<CandidateProfile> = emptyList(),
     liveJobs: List<JobVacancy> = emptyList(),
     onGoogleSignIn: () -> Unit,
     onEmailSignIn: (String, String) -> Unit = { _, _ -> },
@@ -131,6 +132,9 @@ fun ProfileScreen(
     onUpdateEmployerStatus: (String, String) -> Unit = { _, _ -> },
     onPublishJob: (String, String, String, String, String) -> Unit = { _, _, _, _, _ -> },
     onDeleteJob: (String) -> Unit = {},
+    onVerifyCandidate: (String, Boolean) -> Unit = { _, _ -> },
+    onBanCandidate: (String, Boolean) -> Unit = { _, _ -> },
+    onDeleteCandidate: (String, String) -> Unit = { _, _ -> },
     onSignOut: () -> Unit,
     onShowMessage: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -353,11 +357,15 @@ fun ProfileScreen(
                     authState = authState,
                     allApplications = allApplications,
                     allEmployers = allEmployers,
+                    allCandidates = allCandidates,
                     liveJobs = liveJobs,
                     onUpdateAppStatus = onUpdateAppStatus,
                     onUpdateEmployerStatus = onUpdateEmployerStatus,
                     onPublishJob = { t, l, sal -> onPublishJob(t, l, sal, "MigraStaff Direct", authState.uid) },
                     onDeleteJob = onDeleteJob,
+                    onVerifyCandidate = onVerifyCandidate,
+                    onBanCandidate = onBanCandidate,
+                    onDeleteCandidate = onDeleteCandidate,
                     onSignOut = onSignOut,
                     modifier = modifier
                 )
@@ -1009,11 +1017,15 @@ private fun DirectorPanelContent(
     authState: AuthUiState.SignedIn,
     allApplications: List<JobApplication>,
     allEmployers: List<EmployerAccount>,
+    allCandidates: List<CandidateProfile>,
     liveJobs: List<JobVacancy>,
     onUpdateAppStatus: (String, String) -> Unit,
     onUpdateEmployerStatus: (String, String) -> Unit,
     onPublishJob: (String, String, String) -> Unit,
     onDeleteJob: (String) -> Unit,
+    onVerifyCandidate: (String, Boolean) -> Unit,
+    onBanCandidate: (String, Boolean) -> Unit,
+    onDeleteCandidate: (String, String) -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1057,8 +1069,9 @@ private fun DirectorPanelContent(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
                     "Apps (${allApplications.size})",
-                    "Employers (${allEmployers.size})",
-                    "Jobs (${liveJobs.size})"
+                    "Emps (${allEmployers.size})",
+                    "Jobs (${liveJobs.size})",
+                    "Cands (${allCandidates.size})"
                 ).forEachIndexed { idx, label ->
                     Button(
                         onClick = { tab = idx },
@@ -1147,7 +1160,7 @@ private fun DirectorPanelContent(
                     }
                 }
             }
-        } else {
+        } else if (tab == 2) {
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -1188,6 +1201,49 @@ private fun DirectorPanelContent(
                         if (job.docId.isNotBlank()) {
                             TextButton(onClick = { onDeleteJob(job.docId) }) {
                                 Text("Delete", color = CoralRose)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if (allCandidates.isEmpty()) {
+                item { Text("No candidates yet.", color = ArcticMist) }
+            } else {
+                items(allCandidates, key = { it.id }, contentType = { "dir_cand" }) { c ->
+                    val isVer = c.verStatus == "verified"
+                    val cName = "${c.surname} ${c.firstName}".trim().ifEmpty { c.username.ifEmpty { "Candidate" } }
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                        border = BorderStroke(1.dp, if (c.banned) CoralRose else AuroraPrismBorder)
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(cName, style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                                    Text("${c.profession} · ${c.countryCode} · @${c.username}", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                                }
+                                Text(
+                                    if (c.banned) "BANNED" else if (isVer) "Verified" else "Pending",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (c.banned) CoralRose else if (isVer) AuroraMint else GlacierCyan
+                                )
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { onVerifyCandidate(c.userId, !isVer) }, modifier = Modifier.weight(1f)) {
+                                    Text(if (isVer) "Unverify" else "Verify", color = GlacierCyan, maxLines = 1)
+                                }
+                                Button(
+                                    onClick = { onBanCandidate(c.userId, !c.banned) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = if (c.banned) AuroraMint else HyperCobalt, contentColor = Color.White)
+                                ) { Text(if (c.banned) "Unban" else "Ban", maxLines = 1) }
+                                Button(
+                                    onClick = { onDeleteCandidate(c.userId, c.username) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = CoralRose, contentColor = Color.White)
+                                ) { Text("Delete", maxLines = 1) }
                             }
                         }
                     }
