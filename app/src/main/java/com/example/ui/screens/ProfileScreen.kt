@@ -1029,6 +1029,7 @@ private fun DirectorPanelContent(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isRu = lang == AppLang.RU
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var jTitle by remember { mutableStateOf("") }
     var jLoc by remember { mutableStateOf("") }
@@ -1051,15 +1052,15 @@ private fun DirectorPanelContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Director Control Panel", style = MaterialTheme.typography.titleLarge, color = IceWhite)
+                        Text(if (isRu) "Панель директора" else "Director Control Panel", style = MaterialTheme.typography.titleLarge, color = IceWhite)
                         Text(
-                            "Jobs: ${liveJobs.size} · Apps: ${allApplications.size} · Employers: ${allEmployers.size}",
+                            if (isRu) "Вакансии: ${liveJobs.size} · Отклики: ${allApplications.size} · Комп.: ${allEmployers.size}" else "Jobs: ${liveJobs.size} · Apps: ${allApplications.size} · Employers: ${allEmployers.size}",
                             style = MaterialTheme.typography.bodySmall,
                             color = ArcticMist
                         )
                     }
                     TextButton(onClick = onSignOut) {
-                        Text("Logout", color = CoralRose, fontWeight = FontWeight.Bold)
+                        Text(if (isRu) "Выйти" else "Logout", color = CoralRose, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1068,9 +1069,9 @@ private fun DirectorPanelContent(
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    "Apps (${allApplications.size})",
-                    "Emps (${allEmployers.size})",
-                    "Jobs (${liveJobs.size})",
+                    if (isRu) "Откл. (${allApplications.size})" else "Apps (${allApplications.size})",
+                    if (isRu) "Комп. (${allEmployers.size})" else "Emps (${allEmployers.size})",
+                    if (isRu) "Вак. (${liveJobs.size})" else "Jobs (${liveJobs.size})",
                     "Cands (${allCandidates.size})"
                 ).forEachIndexed { idx, label ->
                     Button(
@@ -1089,7 +1090,7 @@ private fun DirectorPanelContent(
 
         if (tab == 0) {
             if (allApplications.isEmpty()) {
-                item { Text("No job applications yet.", color = ArcticMist) }
+                item { Text(if (isRu) "Откликов пока нет." else "No job applications yet.", color = ArcticMist) }
             } else {
                 items(allApplications, key = { it.id }, contentType = { "dir_app" }) { app ->
                     var menuOpen by remember { mutableStateOf(false) }
@@ -1109,12 +1110,12 @@ private fun DirectorPanelContent(
                             }
                             Box {
                                 OutlinedButton(onClick = { menuOpen = true }) {
-                                    Text(app.status.replaceFirstChar { it.uppercase() }, color = GlacierCyan)
+                                    Text(if (!isRu) app.status.replaceFirstChar { it.uppercase() } else when (app.status.lowercase()) { "pending" -> "Ожидает"; "shortlisted" -> "Отобран"; "hired" -> "Нанят"; "rejected" -> "Отклонён"; else -> app.status }, color = GlacierCyan)
                                 }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                     listOf("pending", "shortlisted", "hired", "rejected").forEach { st ->
                                         DropdownMenuItem(
-                                            text = { Text(st.replaceFirstChar { it.uppercase() }) },
+                                            text = { Text(if (!isRu) st.replaceFirstChar { it.uppercase() } else when (st.lowercase()) { "pending" -> "Ожидает"; "shortlisted" -> "Отобран"; "hired" -> "Нанят"; "rejected" -> "Отклонён"; else -> st }) },
                                             onClick = {
                                                 menuOpen = false
                                                 onUpdateAppStatus(app.id, st)
@@ -1129,7 +1130,7 @@ private fun DirectorPanelContent(
             }
         } else if (tab == 1) {
             if (allEmployers.isEmpty()) {
-                item { Text("No registered employers yet.", color = ArcticMist) }
+                item { Text(if (isRu) "Работодателей пока нет." else "No registered employers yet.", color = ArcticMist) }
             } else {
                 items(allEmployers, key = { it.uid }, contentType = { "dir_emp" }) { emp ->
                     val isApproved = emp.status.equals("approved", true)
@@ -1145,7 +1146,7 @@ private fun DirectorPanelContent(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(emp.companyName.ifEmpty { emp.email }, style = MaterialTheme.typography.titleMedium, color = IceWhite)
-                                Text("${emp.city} · ${emp.status}", style = MaterialTheme.typography.bodySmall, color = if (isApproved) AuroraMint else ArcticMist)
+                                Text(if (isRu) "${emp.city} · ${if (isApproved) "одобрен" else "на паузе"}" else "${emp.city} · ${emp.status}", style = MaterialTheme.typography.bodySmall, color = if (isApproved) AuroraMint else ArcticMist)
                             }
                             Button(
                                 onClick = { onUpdateEmployerStatus(emp.uid, if (isApproved) "suspended" else "approved") },
@@ -1154,7 +1155,7 @@ private fun DirectorPanelContent(
                                     contentColor = Color.White
                                 )
                             ) {
-                                Text(if (isApproved) "Suspend" else "Approve")
+                                Text(if (isRu) (if (isApproved) "Пауза" else "Одобрить") else (if (isApproved) "Suspend" else "Approve"))
                             }
                         }
                     }
@@ -1168,12 +1169,12 @@ private fun DirectorPanelContent(
                     border = BorderStroke(1.dp, AuroraPrismBorder)
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("+ Post New Job Vacancy", style = MaterialTheme.typography.titleMedium, color = IceWhite)
-                        OutlinedTextField(value = jTitle, onValueChange = { jTitle = it }, label = { Text("Job Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = jLoc, onValueChange = { jLoc = it }, label = { Text("City / Location") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = jSal, onValueChange = { jSal = it }, label = { Text("Monthly Salary") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Text(if (isRu) "+ Новая вакансия" else "+ Post New Job Vacancy", style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                        OutlinedTextField(value = jTitle, onValueChange = { jTitle = it }, label = { Text(if (isRu) "Должность" else "Job Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jLoc, onValueChange = { jLoc = it }, label = { Text(if (isRu) "Город / Локация" else "City / Location") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jSal, onValueChange = { jSal = it }, label = { Text(if (isRu) "Зарплата в месяц" else "Monthly Salary") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         AuroraGradientButton(
-                            text = "Publish Job Live",
+                            text = if (isRu) "Опубликовать" else "Publish Job Live",
                             onClick = {
                                 onPublishJob(jTitle, jLoc, jSal)
                                 jTitle = ""; jLoc = ""; jSal = ""
@@ -1195,12 +1196,12 @@ private fun DirectorPanelContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(job.titleEn, style = MaterialTheme.typography.titleSmall, color = IceWhite)
-                            Text("${job.cityEn} · ${job.salaryMinRub} ₽", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                            Text((if (isRu) job.titleRu.ifEmpty { job.titleEn } else job.titleEn), style = MaterialTheme.typography.titleSmall, color = IceWhite)
+                            Text("${if (isRu) job.cityRu.ifEmpty { job.cityEn } else job.cityEn} · ${job.salaryMinRub} ₽", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
                         }
                         if (job.docId.isNotBlank()) {
                             TextButton(onClick = { onDeleteJob(job.docId) }) {
-                                Text("Delete", color = CoralRose)
+                                Text(if (isRu) "Удалить" else "Delete", color = CoralRose)
                             }
                         }
                     }
@@ -1208,7 +1209,7 @@ private fun DirectorPanelContent(
             }
         } else {
             if (allCandidates.isEmpty()) {
-                item { Text("No candidates yet.", color = ArcticMist) }
+                item { Text(if (isRu) "Кандидатов пока нет." else "No candidates yet.", color = ArcticMist) }
             } else {
                 items(allCandidates, key = { it.id }, contentType = { "dir_cand" }) { c ->
                     val isVer = c.verStatus == "verified"
@@ -1225,25 +1226,25 @@ private fun DirectorPanelContent(
                                     Text("${c.profession} · ${c.countryCode} · @${c.username}", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
                                 }
                                 Text(
-                                    if (c.banned) "BANNED" else if (isVer) "Verified" else "Pending",
+                                    if (isRu) (if (c.banned) "БАН" else if (isVer) "Проверен" else "Ожидает") else (if (c.banned) "BANNED" else if (isVer) "Verified" else "Pending"),
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                     color = if (c.banned) CoralRose else if (isVer) AuroraMint else GlacierCyan
                                 )
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedButton(onClick = { onVerifyCandidate(c.userId, !isVer) }, modifier = Modifier.weight(1f)) {
-                                    Text(if (isVer) "Unverify" else "Verify", color = GlacierCyan, maxLines = 1)
+                                    Text(if (isRu) (if (isVer) "Снять" else "Проверить") else (if (isVer) "Unverify" else "Verify"), color = GlacierCyan, maxLines = 1)
                                 }
                                 Button(
                                     onClick = { onBanCandidate(c.userId, !c.banned) },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = if (c.banned) AuroraMint else HyperCobalt, contentColor = Color.White)
-                                ) { Text(if (c.banned) "Unban" else "Ban", maxLines = 1) }
+                                ) { Text(if (isRu) (if (c.banned) "Разбан" else "Бан") else (if (c.banned) "Unban" else "Ban"), maxLines = 1) }
                                 Button(
                                     onClick = { onDeleteCandidate(c.userId, c.username) },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = CoralRose, contentColor = Color.White)
-                                ) { Text("Delete", maxLines = 1) }
+                                ) { Text(if (isRu) "Удалить" else "Delete", maxLines = 1) }
                             }
                         }
                     }
