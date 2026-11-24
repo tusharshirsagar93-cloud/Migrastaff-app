@@ -248,14 +248,14 @@ fun ProfileScreen(
                                 modifier = Modifier.weight(1f),
                                 border = BorderStroke(1.dp, if (!isEmpRegMode) GlacierCyan else AuroraPrismBorder)
                             ) {
-                                Text("Candidate / Director", color = if (!isEmpRegMode) GlacierCyan else ArcticMist, maxLines = 1)
+                                Text(if (lang == AppLang.RU) "Кандидат / Директор" else "Candidate / Director", color = if (!isEmpRegMode) GlacierCyan else ArcticMist, maxLines = 1)
                             }
                             OutlinedButton(
                                 onClick = { isEmpRegMode = true },
                                 modifier = Modifier.weight(1f),
                                 border = BorderStroke(1.dp, if (isEmpRegMode) GlacierCyan else AuroraPrismBorder)
                             ) {
-                                Text("Employer Signup", color = if (isEmpRegMode) GlacierCyan else ArcticMist, maxLines = 1)
+                                Text(if (lang == AppLang.RU) "Работодатель" else "Employer Signup", color = if (isEmpRegMode) GlacierCyan else ArcticMist, maxLines = 1)
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
@@ -263,7 +263,7 @@ fun ProfileScreen(
                             OutlinedTextField(
                                 value = companyName,
                                 onValueChange = { companyName = it },
-                                label = { Text("Company Name") },
+                                label = { Text(if (lang == AppLang.RU) "Название компании" else "Company Name") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -271,7 +271,7 @@ fun ProfileScreen(
                             OutlinedTextField(
                                 value = companyCity,
                                 onValueChange = { companyCity = it },
-                                label = { Text("City (Russia)") },
+                                label = { Text(if (lang == AppLang.RU) "Город (Россия)" else "City (Russia)") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -280,7 +280,7 @@ fun ProfileScreen(
                         OutlinedTextField(
                             value = emailOrUser,
                             onValueChange = { emailOrUser = it },
-                            label = { Text(if (isEmpRegMode) "Company Email" else if (lang == AppLang.RU) "Email или @username" else "Email or @username") },
+                            label = { Text(if (isEmpRegMode) (if (lang == AppLang.RU) "Email компании" else "Company Email") else if (lang == AppLang.RU) "Email или @username" else "Email or @username") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -310,7 +310,7 @@ fun ProfileScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = AuroraMint, contentColor = DeepNavyInk)
                             ) {
-                                Text("Register Employer Account", fontWeight = FontWeight.Bold)
+                                Text(if (lang == AppLang.RU) "Создать аккаунт компании" else "Register Employer Account", fontWeight = FontWeight.Bold)
                             }
                         } else {
                             Row(
@@ -371,6 +371,7 @@ fun ProfileScreen(
                 )
             } else if (employerProfile != null) {
                 EmployerPortalContent(
+                    lang = lang,
                     authState = authState,
                     employer = employerProfile,
                     liveJobs = liveJobs,
@@ -1256,6 +1257,7 @@ private fun DirectorPanelContent(
 
 @Composable
 private fun EmployerPortalContent(
+    lang: AppLang,
     authState: AuthUiState.SignedIn,
     employer: EmployerAccount,
     liveJobs: List<JobVacancy>,
@@ -1263,6 +1265,7 @@ private fun EmployerPortalContent(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isRu = lang == AppLang.RU
     val isApproved = employer.status.equals("approved", true)
     var jTitle by remember { mutableStateOf("") }
     var jLoc by remember { mutableStateOf("") }
@@ -1287,13 +1290,13 @@ private fun EmployerPortalContent(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(employer.companyName.ifEmpty { authState.displayName }, style = MaterialTheme.typography.titleLarge, color = IceWhite)
                         Text(
-                            if (isApproved) "✓ Approved Employer (${employer.city})" else "Pending Director Approval (${employer.status})",
+                            if (isApproved) if (isRu) "✓ Одобренный работодатель (${employer.city})" else "✓ Approved Employer (${employer.city})" else if (isRu) "Ожидает одобрения (${employer.status})" else "Pending Director Approval (${employer.status})",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isApproved) AuroraMint else GlacierCyan
                         )
                     }
                     TextButton(onClick = onSignOut) {
-                        Text("Log Out", color = CoralRose)
+                        Text(if (isRu) "Выйти" else "Log Out", color = CoralRose)
                     }
                 }
             }
@@ -1307,12 +1310,12 @@ private fun EmployerPortalContent(
                     border = BorderStroke(1.dp, AuroraPrismBorder)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Post a Job Live", style = MaterialTheme.typography.titleMedium, color = IceWhite)
-                        OutlinedTextField(value = jTitle, onValueChange = { jTitle = it }, label = { Text("Job Title (e.g. Welder)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = jLoc, onValueChange = { jLoc = it }, label = { Text("City (e.g. Moscow)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(value = jSal, onValueChange = { jSal = it }, label = { Text("Monthly Salary (e.g. 90,000 RUB)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Text(if (isRu) "Разместить вакансию" else "Post a Job Live", style = MaterialTheme.typography.titleMedium, color = IceWhite)
+                        OutlinedTextField(value = jTitle, onValueChange = { jTitle = it }, label = { Text(if (isRu) "Должность (напр. Сварщик)" else "Job Title (e.g. Welder)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jLoc, onValueChange = { jLoc = it }, label = { Text(if (isRu) "Город (напр. Москва)" else "City (e.g. Moscow)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = jSal, onValueChange = { jSal = it }, label = { Text(if (isRu) "Зарплата (напр. 90 000 ₽)" else "Monthly Salary (e.g. 90,000 RUB)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         AuroraGradientButton(
-                            text = "Publish Job Live →",
+                            text = if (isRu) "Опубликовать →" else "Publish Job Live →",
                             onClick = {
                                 onPublishJob(jTitle, jLoc, jSal)
                                 jTitle = ""; jLoc = ""; jSal = ""
