@@ -980,7 +980,7 @@ fun QrMatrixCanvas(
         modifier = modifier
             .size(120.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(IceWhite)
+            .background(Color.White)
             .border(2.dp, GlacierCyan.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
             .padding(8.dp)
             .semantics { contentDescription = cd }
@@ -993,7 +993,7 @@ fun QrMatrixCanvas(
                 for (c in 0 until n) {
                     if (matrix[r][c]) {
                         drawRect(
-                            color = QrModuleNavy,
+                            color = Color(0xFF0F172A),
                             topLeft = Offset(c * cellW, r * cellH),
                             size = Size(cellW + 0.4f, cellH + 0.4f)
                         )
