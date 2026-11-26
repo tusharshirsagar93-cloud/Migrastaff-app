@@ -308,14 +308,14 @@ fun SearchScreen(
                             onClick = { visaSupportOnly = !visaSupportOnly },
                             label = {
                                 Text(
-                                    text = if (lang == "ru") "🛂 Визовая поддержка" else "🛂 Visa Support",
+                                    text = if (lang == AppLang.RU) "🛂 Визовая поддержка" else "🛂 Visa Support",
                                     fontWeight = FontWeight.SemiBold
                                 )
                             },
                             shape = RoundedCornerShape(20.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AuroraMint,
-                                selectedLabelColor = DeepNavyInk,
+                                selectedContainerColor = HyperCobalt,
+                                selectedLabelColor = IceWhite,
                                 containerColor = AuroraSurface,
                                 labelColor = ArcticMist
                             ),
