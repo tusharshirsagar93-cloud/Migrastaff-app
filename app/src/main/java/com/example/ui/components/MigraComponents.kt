@@ -394,6 +394,19 @@ fun VacancyCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (vacancy.accountType == "agency") GlacierCyan.copy(alpha = 0.16f) else AuroraMint.copy(alpha = 0.16f)
+                        ) {
+                            Text(
+                                text = if (vacancy.accountType == "agency") "🤝 Agency" else "🏢 Direct",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (vacancy.accountType == "agency") GlacierCyan else AuroraMint,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                maxLines = 1
+                            )
+                        }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
