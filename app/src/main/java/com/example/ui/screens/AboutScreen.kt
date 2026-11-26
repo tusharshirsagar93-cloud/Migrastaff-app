@@ -335,6 +335,36 @@ fun AboutScreen(
                             Icon(Icons.Filled.Call, contentDescription = copy.aboutCall, modifier = Modifier.size(18.dp))
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.workmigrapro.com"))
+                                runCatching { context.startActivity(intent) }
+                            },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = IceWhite)
+                        ) {
+                            Text("🌐 workmigrapro.com", fontSize = 12.sp, maxLines = 1)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.workmigrapro.com/business-setup"))
+                                runCatching { context.startActivity(intent) }
+                            },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, AuroraMint.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = IceWhite)
+                        ) {
+                            Text("💼 Business Setup", fontSize = 12.sp, maxLines = 1)
+                        }
+                    }
                 }
             }
         }
