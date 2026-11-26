@@ -203,6 +203,7 @@ data class JobVacancy(
     val cityEn: String,
     val cityRu: String,
     val visaCountries: List<String>,
+    val accountType: String = "employer",
     val experienceEn: String,
     val experienceRu: String,
     val payScheduleEn: String,

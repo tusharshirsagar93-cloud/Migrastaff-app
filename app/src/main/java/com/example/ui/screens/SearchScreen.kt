@@ -98,6 +98,8 @@ fun SearchScreen(
     modifier: Modifier = Modifier
 ) {
     val copy = MigraStrings.of(lang)
+    var visaSupportOnly by remember { mutableStateOf(false) }
+    val displayedVacancies = remember(vacancies, visaSupportOnly) { if (visaSupportOnly) vacancies.filter { it.visaCountries.isNotEmpty() } else vacancies }
     val activeFilterCount = remember(filterState) {
         (if (filterState.selectedCountry.isNotEmpty()) 1 else 0) +
             (if (filterState.selectedProfession.isNotEmpty()) 1 else 0) +
@@ -297,7 +299,32 @@ fun SearchScreen(
                         )
                     )
                 }
-                items(MigraCatalogData.categories, key = { it.key }) { cat ->
+                item {
+                        FilterChip(
+                            selected = visaSupportOnly,
+                            onClick = { visaSupportOnly = !visaSupportOnly },
+                            label = {
+                                Text(
+                                    text = if (lang == "ru") "🛂 Визовая поддержка" else "🛂 Visa Support",
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AuroraMint,
+                                selectedLabelColor = DeepNavyInk,
+                                containerColor = AuroraSurface,
+                                labelColor = ArcticMist
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = visaSupportOnly,
+                                borderColor = AuroraPrismBorder,
+                                selectedBorderColor = AuroraMint
+                            )
+                        )
+                    }
+                    items(MigraCatalogData.categories, key = { it.key }) { cat ->
                     val selected = filterState.selectedProfession == cat.profEn
                     FilterChip(
                         selected = selected,
@@ -344,7 +371,7 @@ fun SearchScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "${vacancies.size} ${copy.workersFoundSuffix}",
+                        text = "${displayedVacancies.size} ${copy.workersFoundSuffix}",
                         style = MaterialTheme.typography.titleSmall,
                         color = IceWhite
                     )
@@ -359,7 +386,7 @@ fun SearchScreen(
             }
         }
 
-        if (vacancies.isEmpty()) {
+        if (displayedVacancies.isEmpty()) {
             item {
                 Card(
                     modifier = Modifier
@@ -391,7 +418,7 @@ fun SearchScreen(
                 }
             }
         } else {
-            items(vacancies, key = { it.id }, contentType = { "vacancy" }) { vacancy ->
+            items(displayedVacancies, key = { it.id }, contentType = { "vacancy" }) { vacancy ->
                 VacancyCard(
                     vacancy = vacancy,
                     lang = lang,
