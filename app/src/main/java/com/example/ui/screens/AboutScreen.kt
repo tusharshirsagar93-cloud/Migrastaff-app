@@ -206,7 +206,7 @@ fun AboutScreen(
                             Text(
                                 text = if (isRu) "⚡ Новый закон 2026–2027 о доходах (241-ФЗ)" else "⚡ 2026–2027 New Income Law (FZ-241)",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFFFBBF24),
+                                color = Color(0xFFD97706),
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -227,7 +227,7 @@ fun AboutScreen(
                     // Monthly Outstaffing Cost Calculator
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF0B1324).copy(alpha = 0.75f),
+                        color = AuroraSurface,
                         border = BorderStroke(1.dp, AuroraPrismBorder)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -307,7 +307,7 @@ fun AboutScreen(
                             modifier = Modifier.weight(1f).height(44.dp),
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFBBF24))
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD97706))
                         ) { Text(if (isRu) "📖 Закон 2027" else "📖 2027 Law Guide", fontSize = 12.sp, maxLines = 1) }
                     }
                 }
