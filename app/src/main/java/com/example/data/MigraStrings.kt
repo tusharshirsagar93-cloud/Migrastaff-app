@@ -163,7 +163,7 @@ object MigraStrings {
         cryptoSubmitBtn = "Submit TXID for Verification",
         cryptoSignInHint = "Sign in on the Profile tab to save TXID receipts to your cloud account.",
         cryptoReceiptTitle = "Payment Receipt Submitted",
-        aboutHeroTitle = "MigraStaff — Moscow & Global",
+        aboutHeroTitle = "MigraStaff — Global Migration",
         aboutHeroSub = "ООО «МИГРАСТАФФ» · Legal foreign workforce recruitment & migration clearance without agency markups.",
         aboutTeamTitle = "Leadership Team",
         aboutPricingTitle = "Transparent Pricing",

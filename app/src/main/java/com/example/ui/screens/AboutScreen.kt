@@ -37,6 +37,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -146,54 +150,165 @@ fun AboutScreen(
             }
         }
 
-        // Leadership Team
+        // Outstaffing & 2027 Law Section
         item {
-            Text(copy.aboutTeamTitle, style = MaterialTheme.typography.titleLarge, color = IceWhite)
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                MigraCatalogData.teamMembers.forEachIndexed { idx, member ->
-                    val avatarBg = if (idx % 2 == 0) GlacierCyanSoft else RoyalAmethystSoft
-                    val avatarFg = if (idx % 2 == 0) GlacierCyan else RoyalAmethyst
-                    Card(
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+            var salaryRub by remember { mutableIntStateOf(50000) }
+            val taxRub = (salaryRub * 0.43).toInt()
+            val commRub = (salaryRub * 0.12).toInt()
+            val adminRub = 2000
+            val totalRub = salaryRub + taxRub + commRub + adminRub
+            val isRu = lang == AppLang.RU
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                border = BorderStroke(1.2.dp, AuroraMint.copy(alpha = 0.55f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = AuroraMint.copy(alpha = 0.16f)
+                    ) {
+                        Text(
+                            text = if (isRu) "🏢 АУТСТАФФИНГ · ООО «МИГРАСТАФФ»" else "🏢 OUTSTAFFING · ООО «МИГРАСТАФФ»",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AuroraMint,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (isRu) "Аутстаффинг и защита от штрафов" else "Outstaffing & Legal Protection",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = IceWhite,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isRu) {
+                            "Мы становимся официальным работодателем в РФ: договоры, уведомления в МВД и отчётность без рисков. Для граждан ЕАЭС (KG, KZ, AM), СНГ (UZ, TJ, AZ) и визовых стран (IN, BD, NP)."
+                        } else {
+                            "We become the legal employer in Russia — handling contracts, MVD notices & tax reporting. Covers EAEU (KG, KZ, AM), CIS Patent (UZ, TJ, AZ) & Visa countries (IN, BD, NP)."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ArcticMist
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 2026-2027 New Law Alert (FZ-241)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.14f),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.45f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = if (isRu) "⚡ Новый закон 2026–2027 о доходах (241-ФЗ)" else "⚡ 2026–2027 New Income Law (FZ-241)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFFFBBF24),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (isRu) {
+                                    "• 1 окт 2026: ФНС передаёт данные о доходах в МВД каждый квартал.\n• 1 янв / 1 мар 2027: Белая зарплата ≥ прожиточного минимума обязательна (иначе аннулирование).\n• Решение: 100% официальный аутстаффинг без штрафов."
+                                } else {
+                                    "• 1 Oct 2026: Tax Office (FNS) sends worker income data to MVD quarterly.\n• 1 Jan / 1 Mar 2027: Official white salary ≥ regional minimum mandatory.\n• Solution: 100% official Outstaffing — zero fines."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = IceWhite
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Monthly Outstaffing Cost Calculator
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF0B1324).copy(alpha = 0.75f),
                         border = BorderStroke(1.dp, AuroraPrismBorder)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Image(
-                                painter = painterResource(id = member.photoRes),
-                                contentDescription = if (lang == AppLang.RU) member.nameRu else member.nameEn,
-                                contentScale = ContentScale.Crop,
-                                alignment = androidx.compose.ui.BiasAlignment(0f, -0.35f),
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .border(1.5.dp, avatarFg.copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = if (isRu) "🧮 Калькулятор аутстаффинга в месяц" else "🧮 Monthly Outstaffing Calculator",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = GlacierCyan,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { if (salaryRub > 20000) salaryRub -= 5000 },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, AuroraPrismBorder),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = IceWhite)
+                                ) { Text("−5k", fontSize = 11.5.sp) }
                                 Text(
-                                    text = if (lang == AppLang.RU) member.nameRu else member.nameEn,
+                                    text = "${salaryRub} ₽",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = IceWhite
+                                    color = IceWhite,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                Text(
-                                    text = if (lang == AppLang.RU) member.roleRu else member.roleEn,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = avatarFg
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = if (lang == AppLang.RU) member.bioRu else member.bioEn,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = ArcticMist
-                                )
+                                OutlinedButton(
+                                    onClick = { salaryRub += 5000 },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, AuroraPrismBorder),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = IceWhite)
+                                ) { Text("+5k", fontSize = 11.5.sp) }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (isRu) "Налоги (43%):" else "Taxes (43%):", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                                Text("$taxRub ₽", style = MaterialTheme.typography.bodySmall, color = IceWhite, fontWeight = FontWeight.SemiBold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (isRu) "Комиссия (12%):" else "Commission (12%):", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                                Text("$commRub ₽", style = MaterialTheme.typography.bodySmall, color = IceWhite, fontWeight = FontWeight.SemiBold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (isRu) "МВД (1500) + Бух (500):" else "MVD (1500) + Acct (500):", style = MaterialTheme.typography.bodySmall, color = ArcticMist)
+                                Text("$adminRub ₽", style = MaterialTheme.typography.bodySmall, color = IceWhite, fontWeight = FontWeight.SemiBold)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AuroraPrismBorder))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (isRu) "Итого в месяц:" else "Total Monthly:", style = MaterialTheme.typography.titleSmall, color = AuroraMint, fontWeight = FontWeight.Bold)
+                                Text("$totalRub ₽", style = MaterialTheme.typography.titleSmall, color = AuroraMint, fontWeight = FontWeight.Bold)
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://migra.pro/outstaffing"))
+                                runCatching { context.startActivity(intent) }
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = IceWhite)
+                        ) { Text(if (isRu) "📄 Аутстаффинг" else "📄 Outstaffing", fontSize = 12.sp, maxLines = 1) }
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.workmigrapro.com/guides"))
+                                runCatching { context.startActivity(intent) }
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFBBF24))
+                        ) { Text(if (isRu) "📖 Закон 2027" else "📖 2027 Law Guide", fontSize = 12.sp, maxLines = 1) }
                     }
                 }
             }
