@@ -190,7 +190,7 @@ object MigraStrings {
     )
 
     private val ru = UiCopy(
-        brandTag = "Migra.Pro · Платформа миграционных решений",
+        brandTag = "Мигра.Про · Платформа миграционных решений",
         tabSearch = "Поиск",
         tabFx = "Отклики",
         tabCrypto = "Крипто",
@@ -256,7 +256,7 @@ object MigraStrings {
         cryptoSubmitBtn = "Отправить TXID на проверку",
         cryptoSignInHint = "Войдите через Google во вкладке Профиль для сохранения квитанций.",
         cryptoReceiptTitle = "Заявка на проверку принята",
-        aboutHeroTitle = "Migra.Pro — Весь мир",
+        aboutHeroTitle = "MigraStaff — Весь мир",
         aboutHeroSub = "ООО «МИГРАСТАФФ» · Прямой подбор иностранных специалистов и легальное миграционное оформление в РФ.",
         aboutTeamTitle = "Руководство платформы",
         aboutPricingTitle = "Прозрачные тарифы",
