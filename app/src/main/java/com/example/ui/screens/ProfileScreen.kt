@@ -52,6 +52,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.clickable
+import android.content.Intent
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -141,6 +145,7 @@ fun ProfileScreen(
 ) {
     val copy = MigraStrings.of(lang)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     when (authState) {
         AuthUiState.Loading -> {
             Box(
@@ -398,6 +403,75 @@ fun ProfileScreen(
             }
         }
     }
+    }
+    var showMenuSheet by remember { mutableStateOf(false) }
+    val menuCtx = LocalContext.current
+    val isRuMenu = lang == AppLang.RU
+    Surface(
+        onClick = { showMenuSheet = true },
+        shape = RoundedCornerShape(10.dp),
+        color = AuroraSurface,
+        border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.5f)),
+        modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 14.dp)
+    ) {
+        Text(
+            text = "☰",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = GlacierCyan,
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
+        )
+    }
+    if (showMenuSheet) {
+        val menuItems = listOf(
+            Triple("🛂", if (isRuMenu) "Гайды по визе и патенту" else "Visa & Patent Guides", "https://www.workmigrapro.com/guides"),
+            Triple("🧳", if (isRuMenu) "Чек-лист переезда" else "Relocation Checklist", "https://www.workmigrapro.com/jobseekers/relocation-checklist"),
+            Triple("💼", if (isRuMenu) "Бизнес в РФ (Business Setup)" else "Business Setup in Russia", "https://www.workmigrapro.com/business-setup"),
+            Triple("ℹ️", if (isRuMenu) "О MigraStaff и правовая инфо (152-ФЗ)" else "About MigraStaff & Legal (152-FZ)", "https://www.workmigrapro.com/legal"),
+            Triple("💬", if (isRuMenu) "Помощь и WhatsApp (+7 912 850-03-33)" else "Help & WhatsApp (+7 912 850-03-33)", "https://wa.me/79128500333"),
+            Triple("🏢", if (isRuMenu) "Найти сотрудников (Работодателям)" else "Find Employees (Employers & Agencies)", "https://www.workmigrapro.com/employers")
+        )
+        AlertDialog(
+            onDismissRequest = { showMenuSheet = false },
+            containerColor = AuroraSurface,
+            title = {
+                Text(
+                    text = if (isRuMenu) "Дополнительно" else "Additional info",
+                    color = IceWhite,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    menuItems.forEachIndexed { idx, (ico, title, url) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showMenuSheet = false
+                                    runCatching { menuCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(ico, fontSize = 16.sp)
+                            Text("  $title", color = IceWhite, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
+                            Text("›", color = GlacierCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        if (idx < menuItems.lastIndex) {
+                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AuroraPrismBorder))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMenuSheet = false }) {
+                    Text(if (isRuMenu) "Закрыть" else "Close", color = GlacierCyan)
+                }
+            }
+        )
+    }
+}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

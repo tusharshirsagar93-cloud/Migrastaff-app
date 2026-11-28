@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.hisabcalc.vkrpzm"
     minSdk = 24
     targetSdk = 36
-    versionCode = 7
-    versionName = "1.4.2"
+    versionCode = 8
+    versionName = "1.5"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

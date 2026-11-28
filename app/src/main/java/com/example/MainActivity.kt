@@ -40,6 +40,10 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.outlined.Verified
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
@@ -172,11 +176,12 @@ fun MigraStaffApp(
         }
     }
 
+    val safeWorkLbl = if (lang == AppLang.RU) "Услуги и\nзащита" else "Services &\nSafe Work"
     val navItems = listOf(
         NavEntry(MainTab.SEARCH, copy.tabSearch, Icons.Filled.Search, Icons.Outlined.Search),
+        NavEntry(MainTab.ABOUT, safeWorkLbl, Icons.Filled.Verified, Icons.Outlined.Verified),
         NavEntry(MainTab.FX, copy.tabFx, Icons.Filled.Work, Icons.Outlined.Work),
         NavEntry(MainTab.CRYPTO, copy.tabCrypto, Icons.Filled.QrCode2, Icons.Outlined.QrCode2),
-        NavEntry(MainTab.ABOUT, copy.tabAbout, Icons.Filled.Info, Icons.Outlined.Info),
         NavEntry(MainTab.PROFILE, copy.tabProfile, Icons.Filled.AccountCircle, Icons.Outlined.AccountCircle)
     )
 
@@ -261,7 +266,7 @@ fun MigraStaffApp(
                                             contentDescription = item.label
                                         )
                                     },
-                                    label = { Text(item.label, maxLines = 1) },
+                                    label = { Text(item.label, maxLines = 2, fontSize = 10.sp, lineHeight = 11.sp, textAlign = TextAlign.Center) },
                                     modifier = Modifier.testTag("nav_${item.tab.route}"),
                                     colors = NavigationBarItemDefaults.colors(
                                         selectedIconColor = GlacierCyan,
