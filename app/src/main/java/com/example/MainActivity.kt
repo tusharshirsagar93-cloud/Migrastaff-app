@@ -43,7 +43,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
@@ -126,112 +125,7 @@ class MainActivity : ComponentActivity() {
                 MigraStaffApp(activity = this)
             }
         }
-    
-        if (showProfileMenu) {
-            val mCtx = LocalContext.current
-            val isRuM = lang == AppLang.RU
-            val g1 = listOf(
-                Triple("🛂", if (isRuM) "Гайды по визе и патенту" else "Visa & Patent Guides", "https://www.workmigrapro.com/guides"),
-                Triple("🧳", if (isRuM) "Чек-лист переезда" else "Relocation Checklist", "https://www.workmigrapro.com/jobseekers/relocation-checklist"),
-                Triple("💼", if (isRuM) "Бизнес в РФ (Business Setup)" else "Business Setup in Russia", "https://www.workmigrapro.com/business-setup")
-            )
-            val g2 = listOf(
-                Triple("ℹ️", if (isRuM) "О MigraStaff и правовая инфо (152-ФЗ)" else "About MigraStaff & Legal (152-FZ)", "https://www.workmigrapro.com/legal"),
-                Triple("💬", if (isRuM) "Помощь и WhatsApp (+7 912 850-03-33)" else "Help & WhatsApp (+7 912 850-03-33)", "https://wa.me/79128500333"),
-                Triple("🌐", if (isRuM) "Открыть workmigrapro.com" else "Open workmigrapro.com", "https://www.workmigrapro.com")
-            )
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(AuroraCanvasGradient)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            onClick = { showProfileMenu = false },
-                            shape = RoundedCornerShape(10.dp),
-                            color = AuroraSurface,
-                            border = BorderStroke(1.dp, AuroraPrismBorder)
-                        ) {
-                            Text("‹", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = IceWhite, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = if (isRuM) "Дополнительно" else "Additional info",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = IceWhite,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-                        border = BorderStroke(1.dp, AuroraPrismBorder)
-                    ) {
-                        Column {
-                            g1.forEachIndexed { i, (ico, t, u) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().clickable { runCatching { mCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u))) } }.padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(ico, fontSize = 18.sp)
-                                    Text("   $t", color = IceWhite, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                    Text("›", color = ArcticMist, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                                if (i < g1.lastIndex) Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AuroraPrismBorder))
-                            }
-                        }
-                    }
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-                        border = BorderStroke(1.dp, AuroraPrismBorder)
-                    ) {
-                        Column {
-                            g2.forEachIndexed { i, (ico, t, u) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().clickable { runCatching { mCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u))) } }.padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(ico, fontSize = 18.sp)
-                                    Text("   $t", color = IceWhite, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                    Text("›", color = ArcticMist, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                                if (i < g2.lastIndex) Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AuroraPrismBorder))
-                            }
-                        }
-                    }
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = AuroraSurface),
-                        border = BorderStroke(1.dp, AuroraMint.copy(alpha = 0.5f)),
-                        modifier = Modifier.clickable { runCatching { mCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.workmigrapro.com/employers"))) } }
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("🏢", fontSize = 22.sp)
-                            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                                Text(if (isRuM) "Найти сотрудников" else "Find Employees", color = IceWhite, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                                Text(if (isRuM) "Работодателям и агентствам · Аутстаффинг" else "Employers & Agencies · Outstaffing", color = AuroraMint, fontSize = 12.sp)
-                            }
-                            Text("›", color = AuroraMint, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-}
+    }
 }
 
 private data class NavEntry(
@@ -453,11 +347,82 @@ fun MigraStaffApp(
                             .fillMaxSize()
                             .widthIn(max = 760.dp)
                     ) {
+                        if (showProfileMenu) {
+                            val mCtx = LocalContext.current
+                            val isRuM = lang == AppLang.RU
+                            val g1 = listOf(
+                                Triple("🛂", if (isRuM) "Гайды по визе и патенту" else "Visa & Patent Guides", "https://www.workmigrapro.com/guides"),
+                                Triple("🧳", if (isRuM) "Чек-лист переезда" else "Relocation Checklist", "https://www.workmigrapro.com/jobseekers/relocation-checklist"),
+                                Triple("💼", if (isRuM) "Бизнес в РФ (Business Setup)" else "Business Setup in Russia", "https://www.workmigrapro.com/business-setup")
+                            )
+                            val g2 = listOf(
+                                Triple("ℹ️", if (isRuM) "О MigraStaff и правовая инфо (152-ФЗ)" else "About MigraStaff & Legal (152-FZ)", "https://www.workmigrapro.com/legal"),
+                                Triple("💬", if (isRuM) "Помощь и WhatsApp (+7 912 850-03-33)" else "Help & WhatsApp (+7 912 850-03-33)", "https://wa.me/79128500333"),
+                                Triple("🌐", if (isRuM) "Открыть workmigrapro.com" else "Open workmigrapro.com", "https://www.workmigrapro.com")
+                            )
+                            Column(
+                                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        onClick = { showProfileMenu = false },
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = AuroraSurface,
+                                        border = BorderStroke(1.dp, AuroraPrismBorder)
+                                    ) {
+                                        Text("‹", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = IceWhite, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(text = if (isRuM) "Дополнительно" else "Additional info", style = MaterialTheme.typography.titleLarge, color = IceWhite, fontWeight = FontWeight.Bold)
+                                }
+                                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = AuroraSurface), border = BorderStroke(1.dp, AuroraPrismBorder)) {
+                                    Column {
+                                        g1.forEachIndexed { i, (ico, t, u) ->
+                                            Row(modifier = Modifier.fillMaxWidth().clickable { runCatching { mCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u))) } }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text(ico, fontSize = 18.sp)
+                                                Text("   $t", color = IceWhite, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                                Text("›", color = ArcticMist, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                            if (i < g1.lastIndex) Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AuroraPrismBorder))
+                                        }
+                                    }
+                                }
+                                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = AuroraSurface), border = BorderStroke(1.dp, AuroraPrismBorder)) {
+                                    Column {
+                                        g2.forEachIndexed { i, (ico, t, u) ->
+                                            Row(modifier = Modifier.fillMaxWidth().clickable { runCatching { mCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u))) } }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Text(ico, fontSize = 18.sp)
+                                                Text("   $t", color = IceWhite, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                                Text("›", color = ArcticMist, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                            if (i < g2.lastIndex) Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AuroraPrismBorder))
+                                        }
+                                    }
+                                }
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = AuroraSurface),
+                                    border = BorderStroke(1.dp, AuroraMint.copy(alpha = 0.5f)),
+                                    modifier = Modifier.clickable { runCatching { mCtx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.workmigrapro.com/employers"))) } }
+                                ) {
+                                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("🏢", fontSize = 22.sp)
+                                        Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                                            Text(if (isRuM) "Найти сотрудников" else "Find Employees", color = IceWhite, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                                            Text(if (isRuM) "Работодателям и агентствам · Аутстаффинг" else "Employers & Agencies · Outstaffing", color = AuroraMint, fontSize = 12.sp)
+                                        }
+                                        Text("›", color = AuroraMint, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            return@Column
+                        }
                         MigraBrandHeader(
                             lang = lang,
                             onToggleLang = vm::toggleLanguage,
-                        showMenu = (activeTab == MainTab.PROFILE),
-                        onOpenMenu = { showProfileMenu = true }
+                            showMenu = (activeTab == MainTab.PROFILE),
+                            onOpenMenu = { showProfileMenu = true }
                         )
 
                         when (activeTab) {
