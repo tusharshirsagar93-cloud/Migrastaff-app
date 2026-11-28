@@ -42,8 +42,7 @@ jobs:
 
       - name: Build Signed Release APK and AAB
         run: |
-          chmod +x gradlew
-          ./gradlew :app:assembleRelease :app:bundleRelease --no-daemon
+          gradle :app:assembleRelease :app:bundleRelease --no-daemon
 
       - name: Upload Release APK & AAB Artifacts
         uses: actions/upload-artifact@v4
