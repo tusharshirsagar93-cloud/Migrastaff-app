@@ -164,6 +164,8 @@ fun AuroraGradientButton(
 fun MigraBrandHeader(
     lang: AppLang,
     onToggleLang: () -> Unit,
+    showMenu: Boolean = false,
+    onOpenMenu: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val copy = MigraStrings.of(lang)
@@ -253,6 +255,22 @@ fun MigraBrandHeader(
                         text = if (lang == AppLang.EN) "EN · RU" else "RU · EN",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = IceWhite
+                    )
+                }
+            }
+            if (showMenu) {
+                Surface(
+                    onClick = onOpenMenu,
+                    shape = RoundedCornerShape(10.dp),
+                    color = AuroraSurface,
+                    border = BorderStroke(1.dp, GlacierCyan.copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = "☰",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GlacierCyan,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
             }
